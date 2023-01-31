@@ -19,6 +19,9 @@
   padding: 5px;
   cursor: pointer;
 }
+.navbar > div > svg:hover{
+  color: rgb(233, 16, 16);
+}
 
 .navbar2 {
   display: flex;
@@ -31,6 +34,10 @@
   cursor: pointer;
 }
 
+.navbar2 > div:hover{
+  color: rgb(233, 16, 16);
+}
+
 .navbar3 {
   display: flex;
   height: 6rem;
@@ -41,6 +48,10 @@
 .navbar3 > div {
   margin: auto;
   cursor: pointer;
+}
+
+.navbar3 > div:hover{
+  color: rgb(233, 16, 16);
 }
 
 @media screen and (max-width: 820px) {

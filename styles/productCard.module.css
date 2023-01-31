@@ -18,6 +18,9 @@
   transform: translate(189px, 200%);
   cursor: pointer;
 }
+.productcard > P > svg:hover{
+  color: rgb(233, 16, 16);
+}
 
 .productcard > div {
   display: flex;
@@ -33,6 +36,11 @@
   margin-right: 27px;
   cursor: pointer;
 }
+
+.productcard > div > button:hover{
+  color: rgb(233, 16, 16);
+}
+
 .productcard > p {
   font-size: 0.8rem;
   margin-top: 7px;
