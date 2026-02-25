@@ -1,6 +1,5 @@
 "use client"
-import React from 'react';
-import { Header } from '@/components/layout/Header';
+
 import { Footer } from '@/components/layout/Footer';
 import { HelpSupportSection } from '@/components/profile/sections/HelpSupport';
 import { Headphones, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
@@ -8,7 +7,6 @@ import { Headphones, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
 export default function HelpPage() {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            <Header />
 
             <main className="flex-grow">
                 {/* Hero Section */}

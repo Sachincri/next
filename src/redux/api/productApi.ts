@@ -67,6 +67,7 @@ export const productApi = apiSlice.injectEndpoints({
         getRecentlyViewed: builder.query<Product[], void>({
             query: () => "/products/getRecentlyViewedProduct",
             providesTags: ["RecentlyViewed"],
+            transformResponse: (response: any) => response?.data || response || [],
         }),
         addToRecentlyViewed: builder.mutation<ApiResponse<any>, string>({
             query: (productId) => ({

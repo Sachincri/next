@@ -84,7 +84,7 @@ export function Header() {
   };
 
   return (
-    <nav className={`bg-[#0d0e26]  z-50 shadow-md transition-transform duration-300 ease-in-out ${!isVisible ? '-translate-y-full md:translate-y-0' : 'translate-y-0'}`}>
+    <nav className={`bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md transition-transform duration-300 ease-in-out ${!isVisible ? '-translate-y-full md:translate-y-0' : 'translate-y-0'}`}>
       <div className="container-custom">
         <div className="flex justify-between md:justify-center items-center h-20 md:gap-8">
           {/* Mobile menu & Logo Group */}
@@ -145,13 +145,13 @@ export function Header() {
 
               {/* Dropdown menu for authenticated users */}
               {mounted && isAuthenticated && (
-                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-slate-800 rounded-md shadow-xl dark:shadow-slate-900/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-100 dark:border-slate-700 overflow-hidden">
+                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-slate-800 rounded-md shadow-xl dark:shadow-slate-900/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200  border border-gray-100 dark:border-slate-700 overflow-hidden z-[60]">
                   <div className="py-1">
                     {userMenuItems.map((item) => (
                       <Link
                         key={item.path}
                         href={item.path}
-                        className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0"
+                        className="flex items-center My Orders space-x-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0"
                       >
                         <span className="text-gray-500 dark:text-slate-400">{item.icon}</span>
                         <span>{item.name}</span>

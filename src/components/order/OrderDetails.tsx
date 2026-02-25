@@ -25,6 +25,7 @@ const OrderDetails = () => {
       case 'processing': return 'bg-blue-50 text-blue-700';
       case 'shipped': return 'bg-indigo-50 text-indigo-700';
       case 'cancelled': return 'bg-red-50 text-red-700';
+      case 'refunded': return 'bg-orange-50 text-orange-700';
       default: return 'bg-gray-50 text-gray-700';
     }
   };
@@ -54,8 +55,7 @@ const OrderDetails = () => {
                   </div>
 
                   <div className={`flex items-center gap-4 p-3 rounded-lg ${getOrderStatusColor(order?.orderStatus || "")}`}>
-
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${order?.orderStatus === 'Delivered' ? 'bg-green-500' : 'bg-current'}`}></div>
+                    <div className={`w-2 h-2 rounded-full animate-pulse ${['Delivered', 'Refunded'].includes(order?.orderStatus as string) ? 'bg-green-500' : 'bg-current'}`}></div>
                     <span className="font-medium">Your order is {order?.orderStatus}!</span>
                   </div>
                 </div>
@@ -77,7 +77,7 @@ const OrderDetails = () => {
                               <Star className="w-4 h-4 fill-green-500 text-green-500" />
                               <span className="text-sm text-gray-600">4.5</span>
                             </div>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${orderItem.status === 'Delivered' || (orderItem.status === 'Processing' && order?.orderStatus === 'Delivered') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${['Delivered', 'Refunded'].includes(orderItem.status) || (orderItem.status === 'Processing' && order?.orderStatus === 'Delivered') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                               {orderItem.status === 'Processing' && order?.orderStatus !== 'Processing' ? order?.orderStatus : orderItem.status}
                             </span>
                           </div>
@@ -125,11 +125,7 @@ const OrderDetails = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Shipping</span>
-                      <span className="text-green-600">{order?.shippingPrice === 0 ? "Free" : `₹${order?.shippingPrice?.toLocaleString()}`}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tax</span>
-                      <span className="text-gray-900">₹{order?.taxPrice?.toLocaleString()}</span>
+                      <span className="text-green-600">{(order?.shippingPrice || 0) === 0 ? "Free" : `₹${order?.shippingPrice?.toLocaleString()}`}</span>
                     </div>
                     {order?.redeemCoins && order.redeemCoins > 0 && (
                       <div className="flex justify-between">

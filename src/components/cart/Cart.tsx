@@ -142,7 +142,7 @@ const Cart: React.FC = () => {
                       </div>
                       <button
                         onClick={checkoutHandler}
-                        className="w-[50%] xs:w-48 lg:w-60 bg-orange-600 hover:bg-orange-700 text-white py-3 sm:py-3.5 px-6 font-bold text-sm sm:text-base uppercase tracking-tight rounded-sm transition-all shadow-md active:scale-[0.98]"
+                        className="w-[50%] xs:w-48 lg:w-60 bg-[#0d0e26] text-white py-3 sm:py-3.5 px-6 font-bold text-sm sm:text-base uppercase tracking-tight rounded-sm transition-all shadow-md active:scale-[0.98]"
                       >
                         Place Order
                       </button>

@@ -91,25 +91,25 @@ export default function Signup() {
   }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
-      <div className="max-w-md w-full bg-white shadow-2xl rounded-2xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 p-4">
+      <div className="max-w-md w-full bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-8 border border-transparent dark:border-slate-700">
         {/* Header */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Create Your Account
           </h2>
-          <p className="text-gray-600">Join us and start shopping today!</p>
+          <p className="text-gray-600 dark:text-slate-400">Join us and start shopping today!</p>
         </div>
 
         {/* OTP Success Message */}
         {otpSent && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-lg flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-green-800">
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">
                 OTP sent successfully!
               </p>
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
                 Please check your phone for the verification code
               </p>
             </div>
@@ -119,21 +119,21 @@ export default function Signup() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Name Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Full Name
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
               <input
                 {...register('name')}
                 placeholder="John Doe"
                 disabled={otpSent}
-                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${errors.name ? 'border-red-500' : 'border-gray-300'
-                  } ${otpSent ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition dark:bg-slate-700 dark:text-white dark:border-slate-600 ${errors.name ? 'border-red-500' : 'border-gray-300'
+                  } ${otpSent ? 'bg-gray-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
               />
             </div>
             {errors.name && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <p className="text-red-500 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
                 <span className="font-medium">⚠</span> {errors.name.message}
               </p>
             )}
@@ -141,22 +141,22 @@ export default function Signup() {
 
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
               <input
                 {...register('email')}
                 type="email"
                 placeholder="john@example.com"
                 disabled={otpSent}
-                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${errors.email ? 'border-red-500' : 'border-gray-300'
-                  } ${otpSent ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition dark:bg-slate-700 dark:text-white dark:border-slate-600 ${errors.email ? 'border-red-500' : 'border-gray-300'
+                  } ${otpSent ? 'bg-gray-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
               />
             </div>
             {errors.email && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <p className="text-red-500 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
                 <span className="font-medium">⚠</span> {errors.email.message}
               </p>
             )}
@@ -164,22 +164,22 @@ export default function Signup() {
 
           {/* Phone Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Phone Number
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
               <input
                 {...register('phone')}
                 placeholder="10-digit mobile number"
                 disabled={otpSent}
                 maxLength={10}
-                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${errors.phone ? 'border-red-500' : 'border-gray-300'
-                  } ${otpSent ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition dark:bg-slate-700 dark:text-white dark:border-slate-600 ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                  } ${otpSent ? 'bg-gray-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
               />
             </div>
             {errors.phone && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <p className="text-red-500 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
                 <span className="font-medium">⚠</span> {errors.phone.message}
               </p>
             )}
@@ -187,39 +187,39 @@ export default function Signup() {
 
           {/* Referral Code Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Referral Code <span className="text-gray-400 font-normal">(Optional)</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+              Referral Code <span className="text-gray-400 dark:text-slate-500 font-normal">(Optional)</span>
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
               <input
                 {...register('referralCode')}
                 placeholder="Referral Code"
                 disabled={otpSent}
-                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition border-gray-300 ${otpSent ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition dark:bg-slate-700 dark:text-white dark:border-slate-600 border-gray-300 ${otpSent ? 'bg-gray-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
               />
             </div>
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
               <input
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Create a strong password"
                 disabled={otpSent}
-                className={`w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${errors.password ? 'border-red-500' : 'border-gray-300'
-                  } ${otpSent ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                className={`w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition dark:bg-slate-700 dark:text-white dark:border-slate-600 ${errors.password ? 'border-red-500' : 'border-gray-300'
+                  } ${otpSent ? 'bg-gray-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
                 disabled={otpSent}
               >
                 {showPassword ? (
@@ -230,7 +230,7 @@ export default function Signup() {
               </button>
             </div>
             {errors.password && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <p className="text-red-500 dark:text-red-400 text-xs mt-1 flex items-center gap-1">
                 <span className="font-medium">⚠</span> {errors.password.message}
               </p>
             )}
@@ -239,24 +239,24 @@ export default function Signup() {
           {/* OTP Field */}
           {otpSent && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 Verification Code
               </label>
               <input
                 {...register('otp')}
                 placeholder="Enter 6-digit OTP"
                 maxLength={6}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-center text-lg tracking-widest focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-4 py-3 text-center text-lg tracking-widest focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               {countdown > 0 ? (
-                <p className="text-xs text-gray-500 mt-2 text-center">
+                <p className="text-xs text-gray-500 dark:text-slate-500 mt-2 text-center">
                   Resend OTP in {countdown}s
                 </p>
               ) : (
                 <button
                   type="button"
                   // onClick={handleResendOtp}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 mt-2 font-medium block mx-auto"
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mt-2 font-medium block mx-auto"
                 >
                   Resend OTP
                 </button>
@@ -271,22 +271,22 @@ export default function Signup() {
                 {...register('terms')}
                 type="checkbox"
                 id="terms"
-                className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded focus:ring-indigo-500"
               />
-              <label htmlFor="terms" className="text-sm text-gray-600">
+              <label htmlFor="terms" className="text-sm text-gray-600 dark:text-slate-400">
                 I agree to the{' '}
-                <a href="#" className="text-indigo-600 hover:text-indigo-800 font-medium">
+                <a href="#" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
                   Terms & Conditions
                 </a>{' '}
                 and{' '}
-                <a href="#" className="text-indigo-600 hover:text-indigo-800 font-medium">
+                <a href="#" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
                   Privacy Policy
                 </a>
               </label>
             </div>
           )}
           {errors.terms && (
-            <p className="text-red-500 text-xs flex items-center gap-1">
+            <p className="text-red-500 dark:text-red-400 text-xs flex items-center gap-1">
               <span className="font-medium">⚠</span> {errors.terms.message}
             </p>
           )}
@@ -295,7 +295,7 @@ export default function Signup() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-[#0d0e26] text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
@@ -311,11 +311,11 @@ export default function Signup() {
         </form>
 
         {/* Login Link */}
-        <p className="text-center text-sm text-gray-600 mt-6">
+        <p className="text-center text-sm text-gray-600 dark:text-slate-400 mt-6">
           Already have an account?{' '}
           <Link
             href="/login"
-            className="text-indigo-600 hover:text-indigo-800 font-medium"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
           >
             Sign in
           </Link>

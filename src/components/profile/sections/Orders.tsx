@@ -17,6 +17,7 @@ export const OrdersSection = ({ orders }: { orders: Order[] }) => {
             case 'Out for Delivery': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20';
             case 'Processing': return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20';
             case 'Cancelled': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
+            case 'Refunded': return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20';
             default: return 'text-gray-600 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50';
         }
     };
@@ -27,6 +28,7 @@ export const OrdersSection = ({ orders }: { orders: Order[] }) => {
             case 'Out for Delivery': return <Truck className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
             case 'Processing': return <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
             case 'Cancelled': return <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />;
+            case 'Refunded': return <Package className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
             default: return <Package className="w-4 h-4 text-gray-600 dark:text-slate-400" />;
         }
     };

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
     const token = request.cookies.get('jwt')?.value || request.cookies.get('auth-token')?.value;
 
     const pathname = request.nextUrl.pathname;
@@ -15,7 +15,7 @@ export function proxy(request: NextRequest) {
     const response = NextResponse.next();
 
     // Security Headers
-    response.headers.set('X-Middleware-Debug', 'true');
+    // response.headers.set('X-Middleware-Debug', 'true');
 
     response.headers.set('X-Frame-Options', 'DENY');
     response.headers.set('X-Content-Type-Options', 'nosniff');

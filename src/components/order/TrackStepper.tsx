@@ -182,7 +182,8 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
       case 'delivered': return 3;
       case 'shipped': return 2;
       case 'processing': return 1;
-      case 'cancelled': return 0; // Or handle differently
+      case 'refunded': return 4;
+      case 'cancelled': return 0;
       default: return 0;
     }
   };
@@ -191,19 +192,21 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
 
   const getStepStatus = () => {
     if (status.toLowerCase() === 'cancelled') return "Order Cancelled";
+    if (status.toLowerCase() === 'refunded') return "Order Refunded";
     const statuses = ["Order Placed", "Processing Order", "Package Shipped", "Order Delivered"];
     return statuses[currentStep] || "Order Placed";
   };
 
   const isCancelled = status.toLowerCase() === 'cancelled';
+  const isRefunded = status.toLowerCase() === 'refunded';
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Header */}
-      <div className={`px-6 py-4 border-b border-gray-100 ${isCancelled ? 'bg-red-50' : 'bg-gradient-to-r from-blue-50 to-indigo-50'}`}>
+      <div className={`px-6 py-4 border-b border-gray-100 ${isCancelled ? 'bg-red-50' : isRefunded ? 'bg-orange-50' : 'bg-gradient-to-r from-blue-50 to-indigo-50'}`}>
         <div>
-          <h3 className={`text-lg font-semibold ${isCancelled ? 'text-red-900' : 'text-gray-900'}`}>{isCancelled ? 'Order Cancelled' : 'Track Your Order'}</h3>
-          <p className={`text-sm mt-1 ${isCancelled ? 'text-red-700' : 'text-gray-600'}`}>{getStepStatus()}</p>
+          <h3 className={`text-lg font-semibold ${isCancelled ? 'text-red-900' : isRefunded ? 'text-orange-900' : 'text-gray-900'}`}>{isCancelled ? 'Order Cancelled' : isRefunded ? 'Order Refunded' : 'Track Your Order'}</h3>
+          <p className={`text-sm mt-1 ${isCancelled ? 'text-red-700' : isRefunded ? 'text-orange-700' : 'text-gray-600'}`}>{getStepStatus()}</p>
         </div>
       </div>
 
@@ -219,7 +222,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
       </div>
 
       {/* Footer */}
-      {!isCancelled && (
+      {!isCancelled && !isRefunded && (
         <div className="px-6 pb-6">
           <div className={`p-4 rounded-lg transition-all duration-500 ${currentStep === 3
             ? 'bg-green-50 border border-green-200'
@@ -241,6 +244,21 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                   }`}>
                   {currentStep === 3 ? '✅ Completed' : '🚚 Smart Shop Delivery'}
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isRefunded && (
+        <div className="px-6 pb-6">
+          <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-900">💰 Refund Processed</p>
+                <p className="text-sm mt-1 text-orange-700">The amount has been credited back to your original payment method.</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-medium text-orange-600">✅ Completed</p>
               </div>
             </div>
           </div>

@@ -42,10 +42,10 @@ const AISuggestions: React.FC<AISuggestionsProps> = ({ productId }) => {
     if (!isLoading && products.length === 0) return null;
 
     return (
-        <div className=" pt-6 bg-white">
+        <div className=" pt-6 bg-white dark:bg-slate-950">
             <div className="flex items-center gap-2 mb-8 md:px-6">
                 <div className="px-2">
-                    <h2 className="text-2xl font-bold tracking-tight md:px-0">Recommended for You</h2>
+                    <h2 className="text-2xl font-bold tracking-tight md:px-0 dark:text-white">Recommended for You</h2>
                 </div>
             </div>
 

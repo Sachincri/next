@@ -36,19 +36,20 @@ export const ClientIslands: React.FC<ClientIslandsProps> = (props) => {
     const { data: serverRecentlyViewed } = useGetRecentlyViewedQuery(undefined, { skip: !isAuthenticated });
 
     const otherBrandProducts = useMemo(() => {
-        if (!props.similarProducts || !props.currentBrandId) return [];
+        if (!Array.isArray(props.similarProducts) || !props.currentBrandId) return [];
         return props.similarProducts.filter((p: any) => {
-            const pBrandId = typeof p.brand === 'object' ? p.brand._id : p.brand;
+            const pBrandId = typeof p?.brand === 'object' ? p.brand?._id : p?.brand;
             return pBrandId && props.currentBrandId && pBrandId !== props.currentBrandId;
         });
     }, [props.similarProducts, props.currentBrandId]);
 
     const recentlyViewedProducts = useMemo(() => {
-        const products = (localRecentlyViewed && localRecentlyViewed.length > 0)
+        const products = (localRecentlyViewed && Array.isArray(localRecentlyViewed) && localRecentlyViewed.length > 0)
             ? localRecentlyViewed
-            : (serverRecentlyViewed || []);
+            : (Array.isArray(serverRecentlyViewed) ? serverRecentlyViewed : []);
+
         // Filter out the current product from recently viewed
-        return products.filter((p: any) => (p._id || p.id) !== props.productId);
+        return products.filter((p: any) => p && (p._id || p.id) !== props.productId);
     }, [localRecentlyViewed, serverRecentlyViewed, props.productId]);
 
     return (

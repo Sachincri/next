@@ -94,7 +94,17 @@ const ProfileContent: React.FC = () => {
             onSave={handleProfileSave}
           />;
         case 'addresses': return <AddressesSection />;
-        case 'orders': return <OrdersSection orders={orders.flatMap((order: any) => (order.orderItems || []).map((item: any) => ({ ...order, id: order._id, title: item.name, image: item.image, price: item.sellingPrice })))} />;
+        case 'orders': return <OrdersSection orders={orders.flatMap((order: any) => (order.orderItems || []).map((item: any) => ({
+          ...order,
+          id: order._id,
+          productId: item.product?._id || item.product,
+          title: item.name,
+          image: item.image,
+          price: item.sellingPrice,
+          quantity: item.quantity,
+          status: item.status || order.orderStatus,
+          orderDate: new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        })))} />;
         case 'rewards': return <RewardsSection rewards={rewards} />;
         case 'reviews': return <ReviewsSection />;
         case 'help': return <HelpSupportSection />;
