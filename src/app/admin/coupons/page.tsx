@@ -32,6 +32,16 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "react-hot-toast";
 
 export default function CouponsPage() {
@@ -40,6 +50,7 @@ export default function CouponsPage() {
     const [deleteCoupon, { isLoading: isDeleting }] = useDeleteCouponMutation();
     const [search, setSearch] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [couponToDelete, setCouponToDelete] = useState<string | null>(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -93,14 +104,13 @@ export default function CouponsPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (window.confirm("Are you sure you want to delete this coupon?")) {
-            try {
-                await deleteCoupon(id).unwrap();
-                toast.success("Coupon deleted successfully");
-                refetch();
-            } catch (error: any) {
-                toast.error(error?.data?.message || "Failed to delete coupon");
-            }
+        try {
+            await deleteCoupon(id).unwrap();
+            toast.success("Coupon deleted successfully");
+            setCouponToDelete(null);
+            refetch();
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to delete coupon");
         }
     };
 
@@ -245,7 +255,7 @@ export default function CouponsPage() {
                     </div>
                 </div>
 
-                <div className="rounded-md border bg-card">
+                <div className="rounded-md border bg-card overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -308,7 +318,7 @@ export default function CouponsPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                    onClick={() => handleDelete(coupon._id)}
+                                                    onClick={() => setCouponToDelete(coupon._id)}
                                                     disabled={isDeleting}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -322,6 +332,27 @@ export default function CouponsPage() {
                     </Table>
                 </div>
             </div>
+
+            <AlertDialog open={!!couponToDelete} onOpenChange={(open) => !open && setCouponToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the coupon
+                            and it will no longer be usable by customers.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => couponToDelete && handleDelete(couponToDelete)}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isDeleting ? "Deleting..." : "Delete Coupon"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </DashboardLayout>
     );
 }

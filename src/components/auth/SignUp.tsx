@@ -23,10 +23,9 @@ const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   otp: z.string().optional(),
   terms: z.boolean().refine((val) => val === true, {
-    message: 'You must accept the terms and conditions',
+    message: "You must accept the terms and conditions",
   }),
-  referralCode: z.string().optional(),
-})
+});
 
 type SignupFormData = z.infer<typeof signupSchema>
 
@@ -87,8 +86,8 @@ export default function Signup() {
     }
   };
   useEffect(() => {
-    if (isAuthenticated) router.push('/');
-  }, [isAuthenticated]);
+    if (isAuthenticated && !otpSent) router.push('/');
+  }, [isAuthenticated, otpSent]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 p-4">
@@ -185,21 +184,6 @@ export default function Signup() {
             )}
           </div>
 
-          {/* Referral Code Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-              Referral Code <span className="text-gray-400 dark:text-slate-500 font-normal">(Optional)</span>
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-              <input
-                {...register('referralCode')}
-                placeholder="Referral Code"
-                disabled={otpSent}
-                className={`w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition dark:bg-slate-700 dark:text-white dark:border-slate-600 border-gray-300 ${otpSent ? 'bg-gray-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
-              />
-            </div>
-          </div>
 
           {/* Password Field */}
           <div>
@@ -295,17 +279,20 @@ export default function Signup() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[#0d0e26] text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-[#0d0e26] dark:bg-indigo-600 text-white py-3.5 rounded-xl hover:bg-opacity-90 transition-all duration-300 font-semibold shadow-lg hover:shadow-indigo-500/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
           >
             {isLoading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Processing...
+                <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+                <span className="tracking-wide">Please wait...</span>
               </>
             ) : otpSent ? (
-              'Verify & Create Account'
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>Verify & Create Account</span>
+              </>
             ) : (
-              'Send OTP'
+              'Send Verification OTP'
             )}
           </button>
         </form>

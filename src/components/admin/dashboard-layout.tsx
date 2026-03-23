@@ -17,6 +17,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -126,42 +127,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </SidebarHeader>
 
           <SidebarContent className="px-2 py-4">
-            {navigationGroups.map((group) => (
-              <SidebarGroup key={group.label} className="mb-4">
-                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-                  {group.label}
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const isActive = pathname === item.href
-                      return (
-                        <SidebarMenuItem key={item.href}>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={isActive}
-                            tooltip={item.title}
-                            className={`
-                              transition-all duration-200 
-                              ${isActive
-                                ? 'bg-blue-50 text-blue-600 font-medium shadow-sm hover:bg-blue-100 hover:text-blue-700'
-                                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                              }
-                            `}
-                          >
-                            <Link href={item.href} className="flex items-center gap-3">
-                              <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
-                              <span>{item.title}</span>
-                              {/* Optional: Add badges here if needed */}
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            ))}
+            <SidebarNavItems pathname={pathname} />
           </SidebarContent>
 
           <SidebarFooter className="border-t border-sidebar-border">
@@ -208,7 +174,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset>
+        <SidebarInset className="min-w-0 overflow-hidden">
           {/* Top Navigation Bar */}
           <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="-ml-1" />
@@ -230,5 +196,76 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </SidebarInset>
       </div>
     </SidebarProvider>
+  )
+}
+
+function SidebarNavItems({ pathname }: { pathname: string }) {
+  const { setOpenMobile } = useSidebar()
+  
+  return (
+    <>
+      {[
+        {
+          label: "Dashboard",
+          items: [
+            { title: "Overview", href: "/admin", icon: LayoutDashboard },
+            { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+          ]
+        },
+        {
+          label: "Management",
+          items: [
+            { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
+            { title: "Products", href: "/admin/products", icon: Package },
+            { title: "Customers", href: "/admin/customers", icon: Users },
+            { title: "Coupons", href: "/admin/coupons", icon: Ticket },
+            { title: "Sales & Revenue", href: "/admin/sales", icon: TrendingUp },
+            { title: "Issues", href: "/admin/issues", icon: MessageSquare },
+          ]
+        },
+        {
+          label: "System",
+          items: [
+            { title: "Home Content", href: "/admin/content", icon: FileText },
+            { title: "Settings", href: "/admin/settings", icon: Settings },
+          ]
+        }
+      ].map((listGroup) => (
+        <SidebarGroup key={listGroup.label} className="mb-4">
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
+            {listGroup.label}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {listGroup.items.map((navItem) => {
+                const isActive = pathname === navItem.href
+                return (
+                  <SidebarMenuItem key={navItem.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={navItem.title}
+                      onClick={() => setOpenMobile(false)}
+                      className={`
+                        transition-all duration-200 
+                        ${isActive
+                          ? 'bg-blue-50 text-blue-600 font-medium shadow-sm hover:bg-blue-100 hover:text-blue-700'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        }
+                      `}
+                    >
+                      <Link href={navItem.href} className="flex items-center gap-3">
+                        <navItem.icon className={`h-4 w-4 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
+                        <span>{navItem.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
+    </>
   )
 }

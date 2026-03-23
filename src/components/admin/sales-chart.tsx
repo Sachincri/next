@@ -96,7 +96,7 @@ export default function SalesChart({ allData, data }: SalesChartProps) {
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -127,7 +127,7 @@ export default function SalesChart({ allData, data }: SalesChartProps) {
       <CardContent>
         <div className="h-72 w-full min-w-0 bg-muted/20 rounded-xl p-2 sm:p-4 border border-border/50">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 10 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} vertical={false} />
               <XAxis
                 dataKey="label"

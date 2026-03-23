@@ -26,9 +26,9 @@ export default function SalesHeader() {
         <p className="text-muted-foreground">Comprehensive sales analytics and revenue insights</p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <Calendar className="w-4 h-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
@@ -41,15 +41,17 @@ export default function SalesHeader() {
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm">
-          <Filter className="w-4 h-4 mr-2" />
-          Filters
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+            <Filter className="w-4 h-4 mr-2" />
+            Filters
+          </Button>
 
-        <Button variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
-          Export
-        </Button>
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
       </div>
     </div>
   )

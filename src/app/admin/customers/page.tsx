@@ -12,7 +12,9 @@ export default function CustomersPage() {
       <div className="space-y-6">
         <CustomersHeader />
         <CustomersSegments />
-        <CustomersTable />
+        <div className="overflow-x-auto pb-4">
+          <CustomersTable />
+        </div>
       </div>
     </DashboardLayout>
   )

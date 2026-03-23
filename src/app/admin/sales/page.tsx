@@ -15,8 +15,12 @@ export default function SalesPage() {
         <SalesHeader />
         <SalesSummaryCards />
         <RevenueChart />
-        <SalesBreakdown />
-        <TransactionsTable />
+        <div className="overflow-x-auto">
+          <SalesBreakdown />
+        </div>
+        <div className="overflow-x-auto pb-4">
+          <TransactionsTable />
+        </div>
       </div>
     </DashboardLayout>
   )

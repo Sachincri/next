@@ -29,23 +29,23 @@ export default function ProductsHeader() {
           <p className="text-muted-foreground">Manage your inventory and product catalog</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none justify-start px-2">
             <Upload className="w-4 h-4 mr-2" />
-            Import Products
+            Import
           </Button>
 
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none justify-start px-2">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            Export
           </Button>
 
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none justify-start px-2">
             <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Bulk Edit
+            Bulk
           </Button>
 
-          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Add Product
           </Button>

@@ -8,26 +8,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { TrendingUp, BarChart3, PieChartIcon, Activity, Download } from "lucide-react"
 import { useGetAdminDashboardQuery, useGetProductAnalyticsQuery } from "@/redux/api/adminApi"
 
-const LineChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.LineChart })), { ssr: false })
-const Line = dynamic(() => import("recharts").then((mod) => ({ default: mod.Line })), { ssr: false })
-const AreaChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.AreaChart })), { ssr: false })
-const Area = dynamic(() => import("recharts").then((mod) => ({ default: mod.Area })), { ssr: false })
-const BarChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.BarChart })), { ssr: false })
-const Bar = dynamic(() => import("recharts").then((mod) => ({ default: mod.Bar })), { ssr: false })
-const PieChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.PieChart })), { ssr: false })
-const Pie = dynamic(() => import("recharts").then((mod) => ({ default: mod.Pie })), { ssr: false })
-const Cell = dynamic(() => import("recharts").then((mod) => ({ default: mod.Cell })), { ssr: false })
-const XAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.XAxis })), { ssr: false })
-const YAxis = dynamic(() => import("recharts").then((mod) => ({ default: mod.YAxis })), { ssr: false })
-const CartesianGrid = dynamic(() => import("recharts").then((mod) => ({ default: mod.CartesianGrid })), { ssr: false })
-const Tooltip = dynamic(() => import("recharts").then((mod) => ({ default: mod.Tooltip })), { ssr: false })
-const Legend = dynamic(() => import("recharts").then((mod) => ({ default: mod.Legend })), { ssr: false }) as any
-const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => ({ default: mod.ResponsiveContainer })), {
-  ssr: false,
-})
-const ComposedChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.ComposedChart })), { ssr: false })
-const ScatterChart = dynamic(() => import("recharts").then((mod) => ({ default: mod.ScatterChart })), { ssr: false })
-const Scatter = dynamic(() => import("recharts").then((mod) => ({ default: mod.Scatter })), { ssr: false })
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+  ScatterChart,
+  Scatter
+} from "recharts"
 
 export default function EnhancedAnalyticsDashboard() {
   const [selectedChart, setSelectedChart] = useState<"line" | "area" | "bar" | "composed">("line")
@@ -110,7 +110,7 @@ export default function EnhancedAnalyticsDashboard() {
     switch (selectedChart) {
       case "line":
         return (
-          <LineChart data={salesData} margin={{ top: 20, right: 30, left: 10, bottom: 25 }}>
+          <LineChart data={salesData} margin={{ top: 20, right: 10, left: 10, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
             <XAxis
               dataKey={timeRange === "1y" ? "month" : "date"}
@@ -150,7 +150,7 @@ export default function EnhancedAnalyticsDashboard() {
         );
       case "area":
         return (
-          <AreaChart data={salesData} margin={{ top: 20, right: 30, left: 10, bottom: 25 }}>
+          <AreaChart data={salesData} margin={{ top: 20, right: 10, left: 10, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
             <XAxis
               dataKey={timeRange === "1y" ? "month" : "date"}
@@ -190,7 +190,7 @@ export default function EnhancedAnalyticsDashboard() {
         );
       case "bar":
         return (
-          <BarChart data={salesData} margin={{ top: 20, right: 30, left: 10, bottom: 25 }}>
+          <BarChart data={salesData} margin={{ top: 20, right: 10, left: 10, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
             <XAxis
               dataKey={timeRange === "1y" ? "month" : "date"}
@@ -223,7 +223,7 @@ export default function EnhancedAnalyticsDashboard() {
         );
       case "composed":
         return (
-          <ComposedChart data={salesData} margin={{ top: 20, right: 30, left: 10, bottom: 25 }}>
+          <ComposedChart data={salesData} margin={{ top: 20, right: 10, left: -20, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
             <XAxis
               dataKey={timeRange === "1y" ? "month" : "date"}
@@ -274,7 +274,7 @@ export default function EnhancedAnalyticsDashboard() {
   return (
     <div className="space-y-6">
       {/* Main Analytics Chart */}
-      <Card className="col-span-full">
+      <Card className="col-span-full min-w-0 overflow-hidden">
         <CardHeader>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
@@ -282,7 +282,7 @@ export default function EnhancedAnalyticsDashboard() {
               <p className="text-sm text-muted-foreground">Interactive data visualization with live API data</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
               <Select value={timeRange} onValueChange={setTimeRange}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -374,9 +374,9 @@ export default function EnhancedAnalyticsDashboard() {
       </Card>
 
       {/* Secondary Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0 w-full">
         {/* Category Performance */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Category Performance</CardTitle>
             <p className="text-sm text-muted-foreground">Revenue by product category</p>
@@ -415,7 +415,7 @@ export default function EnhancedAnalyticsDashboard() {
         </Card>
 
         {/* Customer Segments */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Customer Segments</CardTitle>
             <p className="text-sm text-muted-foreground">Distribution by customer type</p>
@@ -452,7 +452,7 @@ export default function EnhancedAnalyticsDashboard() {
         </Card>
 
         {/* Regional Performance */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Regional Performance</CardTitle>
             <p className="text-sm text-muted-foreground">Revenue and growth by region</p>
@@ -503,7 +503,7 @@ export default function EnhancedAnalyticsDashboard() {
         </Card>
 
         {/* Revenue vs Profit Correlation */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Revenue vs Profit Analysis</CardTitle>
             <p className="text-sm text-muted-foreground">Correlation between revenue and profit</p>

@@ -245,19 +245,21 @@ export default function HomePage() {
         </div>
 
         {/* Charts Row 1: Primary Metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
+          <div className="lg:col-span-2 min-w-0 overflow-hidden">
             <SalesChart allData={data?.charts} />
           </div>
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 min-w-0 overflow-hidden">
             <OrderStatusChart data={data?.ordersByStatus} />
           </div>
         </div>
 
         {/* Charts Row 2: Secondary Metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CategoryPerformanceChart data={analyticsData?.topCategories} />
-          <Card className="hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0 w-full">
+          <div className="min-w-0 overflow-hidden">
+            <CategoryPerformanceChart data={analyticsData?.topCategories} />
+          </div>
+          <Card className="hover:shadow-md transition-shadow min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Real-time Insights</CardTitle>
               <p className="text-sm text-muted-foreground">Today's snapshot compared to average</p>
@@ -337,14 +339,14 @@ export default function HomePage() {
         </div>
 
         {/* Recent Activity & Top Products */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 min-w-0 w-full">
           {/* Recent Orders */}
           <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg font-bold">Recent Orders</CardTitle>
               <p className="text-sm text-muted-foreground">Latest transactions from your store</p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
@@ -438,7 +440,7 @@ export default function HomePage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0 w-full">
           {/* Low Stock Alerts */}
           <Card className="border-red-100 dark:border-red-900/20">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -522,9 +524,9 @@ export default function HomePage() {
         </div>
 
         {/* Enhanced Analytics Dashboard Section */}
-        <div className="mt-8">
+        <div className="mt-8 min-w-0 w-full">
           <h2 className="text-2xl font-bold text-foreground mb-4">Advanced Analytics</h2>
-          <div className="bg-card border rounded-lg p-6">
+          <div className="bg-card border rounded-lg p-2 sm:p-6 min-w-0 overflow-hidden">
             <EnhancedAnalyticsDashboard />
           </div>
         </div>

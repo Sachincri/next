@@ -11,18 +11,18 @@ export default function CustomersHeader() {
         <p className="text-muted-foreground">Manage customer relationships and segments</p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
           <Target className="w-4 h-4 mr-2" />
-          Create Segment
+          Segment
         </Button>
 
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
           <Download className="w-4 h-4 mr-2" />
-          Export Customers
+          Export
         </Button>
 
-        <Button size="sm">
+        <Button size="sm" className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Add Customer
         </Button>

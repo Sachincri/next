@@ -90,7 +90,7 @@ export default function OrdersFilters() {
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Order Status" />
               </SelectTrigger>
               <SelectContent>
@@ -105,7 +105,7 @@ export default function OrdersFilters() {
             </Select>
 
             <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Payment Status" />
               </SelectTrigger>
               <SelectContent>
@@ -120,7 +120,7 @@ export default function OrdersFilters() {
             <Button
               variant="outline"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className={showAdvanced ? "bg-muted" : ""}
+              className={`w-full sm:w-auto ${showAdvanced ? "bg-muted" : ""}`}
             >
               <Filter className="w-4 h-4 mr-2" />
               Advanced

@@ -23,7 +23,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [dispatch, error, message]);
 
-  const loading = reduxLoading || queryLoading;
+  // Only show the global loader for initial query loading (session check)
+  // reduxLoading should not unmount the whole app for background mutations
+  const loading = queryLoading;
 
   if (loading) {
     return <Loader />;

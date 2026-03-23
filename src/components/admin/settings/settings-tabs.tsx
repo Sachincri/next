@@ -58,14 +58,10 @@ export default function SettingsTabs() {
     stripeEnabled: false,
     googleAnalyticsEnabled: false,
     emailEnabled: false,
-    emailService: "smtp",
+    emailService: "brevo",
     aiChatEnabled: true,
     aiSuggestionsEnabled: true,
-    smtpHost: "",
-    smtpPort: 587,
-    smtpUser: "",
-    smtpPassword: "",
-    sendgridApiKey: ""
+    brevoApiKey: ""
   })
 
   const [profileData, setProfileData] = useState({
@@ -95,14 +91,10 @@ export default function SettingsTabs() {
         stripeEnabled: settings.stripeEnabled ?? false,
         googleAnalyticsEnabled: settings.googleAnalyticsEnabled ?? false,
         emailEnabled: settings.emailEnabled ?? false,
-        emailService: settings.emailService || "smtp",
+        emailService: settings.emailService || "brevo",
         aiChatEnabled: settings.aiChatEnabled ?? true,
         aiSuggestionsEnabled: settings.aiSuggestionsEnabled ?? true,
-        smtpHost: settings.smtpHost || "",
-        smtpPort: settings.smtpPort || 587,
-        smtpUser: settings.smtpUser || "",
-        smtpPassword: settings.smtpPassword || "",
-        sendgridApiKey: settings.sendgridApiKey || ""
+        brevoApiKey: settings.brevoApiKey || ""
       }))
     }
   }, [settings])
@@ -423,84 +415,16 @@ export default function SettingsTabs() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="emailService">Email Service Provider</Label>
-                  <Select
-                    value={formData.emailService}
-                    onValueChange={(val) => setFormData(p => ({ ...p, emailService: val as "smtp" | "sendgrid" }))}
-                  >
-                    <SelectTrigger id="emailService">
-                      <SelectValue placeholder="Select email service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="smtp">SMTP</SelectItem>
-                      <SelectItem value="sendgrid">SendGrid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">Select the email service provider to use for transactional emails.</p>
+                  <Label htmlFor="brevoApiKey">Brevo API Key</Label>
+                  <Input
+                    id="brevoApiKey"
+                    type="password"
+                    value={formData.brevoApiKey}
+                    onChange={handleInputChange}
+                    placeholder="xkeysib-xxxxxxxx................"
+                  />
+                  <p className="text-xs text-muted-foreground">Enter your Brevo API key for transactional emails. Note: Legacy SMTP settings have been deprecated in favor of native API.</p>
                 </div>
-
-                {formData.emailService === "smtp" && (
-                  <div className="space-y-4 pt-2 border-t border-muted">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtpHost">SMTP Host</Label>
-                        <Input
-                          id="smtpHost"
-                          value={formData.smtpHost}
-                          onChange={handleInputChange}
-                          placeholder="e.g. smtp.example.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="smtpPort">SMTP Port</Label>
-                        <Input
-                          id="smtpPort"
-                          type="number"
-                          value={formData.smtpPort}
-                          onChange={handleInputChange}
-                          placeholder="e.g. 587"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtpUser">SMTP User</Label>
-                        <Input
-                          id="smtpUser"
-                          value={formData.smtpUser}
-                          onChange={handleInputChange}
-                          placeholder="your-email@example.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="smtpPassword">SMTP Password</Label>
-                        <Input
-                          id="smtpPassword"
-                          type="password"
-                          value={formData.smtpPassword}
-                          onChange={handleInputChange}
-                          placeholder="••••••••"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {formData.emailService === "sendgrid" && (
-                  <div className="space-y-4 pt-2 border-t border-muted">
-                    <div className="space-y-2">
-                      <Label htmlFor="sendgridApiKey">SendGrid API Key</Label>
-                      <Input
-                        id="sendgridApiKey"
-                        type="password"
-                        value={formData.sendgridApiKey}
-                        onChange={handleInputChange}
-                        placeholder="SG.xxxxxxxx................"
-                      />
-                      <p className="text-xs text-muted-foreground">Enter your SendGrid API key with mail sending permissions.</p>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 

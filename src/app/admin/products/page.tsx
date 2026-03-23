@@ -12,7 +12,9 @@ export default function ProductsPage() {
       <div className="space-y-6">
         <ProductsHeader />
         <ProductsSummary />
-        <ProductsTable />
+        <div className="overflow-x-auto pb-4">
+          <ProductsTable />
+        </div>
       </div>
     </DashboardLayout>
   )

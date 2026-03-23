@@ -9,7 +9,9 @@ export default function OrdersPage() {
       <div className="space-y-6">
         <OrdersHeader />
         <OrdersFilters />
-        <OrdersTable />
+        <div className="overflow-x-auto pb-4">
+          <OrdersTable />
+        </div>
       </div>
     </DashboardLayout>
   )

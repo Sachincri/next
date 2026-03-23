@@ -470,7 +470,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] w-[90vw] xl:max-w-7xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-[90vw] w-[90vw] xl:max-w-7xl max-h-[92vh] overflow-y-auto max-sm:w-screen max-sm:h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:p-4 max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:border-none">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEdit ? <Edit3 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -921,7 +921,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
             </div>
           </div>
 
-          <div className="flex justify-end items-center gap-3 pt-6 border-t mt-4">
+          <div className="flex justify-end items-center gap-3 pt-6 border-t mt-4 sticky bottom-0 bg-background pb-6 sm:pb-0">
             <Button type="button" variant="outline" onClick={() => { onOpenChange(false); resetLocal() }}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Product')}

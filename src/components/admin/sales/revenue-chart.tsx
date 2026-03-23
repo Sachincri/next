@@ -90,7 +90,7 @@ export default function RevenueChart() {
 
   if (isLoading) {
     return (
-      <Card className="col-span-full">
+      <Card className="col-span-full min-w-0 overflow-hidden">
         <CardContent className="h-96 flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
@@ -99,7 +99,7 @@ export default function RevenueChart() {
   }
 
   return (
-    <Card className="col-span-full">
+    <Card className="col-span-full min-w-0 overflow-hidden">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -160,8 +160,8 @@ export default function RevenueChart() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-96 min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             {chartType === "line" ? (
               <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
