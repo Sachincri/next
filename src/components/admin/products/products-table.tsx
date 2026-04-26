@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs"
 import { Switch } from "@/ui/switch"
-import { Search, Filter, Edit, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, Eye, BarChart3, AlertTriangle } from "lucide-react"
+import { Search, Filter, Edit, Trash2, MoreHorizontal, ChevronLeft, ChevronRight, Eye, BarChart3, AlertTriangle, Home } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,10 +22,20 @@ import {
   AlertDialogTitle,
 } from "../../ui/alert-dialog"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../ui/dialog"
+import {
   useGetAdminProductsQuery,
   useDeleteProductMutation,
   useUpdateProductMutation,
-  useGetProductAnalyticsQuery
+  useGetProductAnalyticsQuery,
+  useGetHomeSectionsQuery,
+  useAddProductToHomeSectionMutation
 } from "@/redux/api/adminApi"
 
 import AddEditProductModal from "./add-product-modal"
@@ -57,6 +67,17 @@ export default function ProductsTable() {
   // Review Modal State
   const [reviewProductId, setReviewProductId] = useState<string | null>(null)
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
+
+  // Move to Home Modal State
+  const [movingProduct, setMovingProduct] = useState<Product | null>(null)
+  const [isMoveToHomeOpen, setIsMoveToHomeOpen] = useState(false)
+  const [selectedSection, setSelectedSection] = useState<string>("")
+  const [selectedQuadIndex, setSelectedQuadIndex] = useState<string>("0")
+
+  const { data: homeSections, isLoading: sectionsLoading } = useGetHomeSectionsQuery(undefined, {
+    skip: !isMoveToHomeOpen
+  });
+  const [addProductToHome] = useAddProductToHomeSectionMutation();
 
   // Alert Dialog State
   const [alertOpen, setAlertOpen] = useState(false)
@@ -128,6 +149,30 @@ export default function ProductsTable() {
       } catch (error: any) {
         toast.error(error?.data?.message || "Failed to update product");
       }
+    }
+  }
+
+  const handleMoveToHome = (product: Product) => {
+    setMovingProduct(product)
+    setIsMoveToHomeOpen(true)
+  }
+
+  const executeMoveToHome = async () => {
+    if (!movingProduct?._id || !selectedSection) return;
+
+    try {
+      const section = homeSections?.find(s => s.id === selectedSection);
+      await addProductToHome({
+        productId: movingProduct._id,
+        sectionId: selectedSection,
+        quadIndex: section?.type === 'quad_grid' ? Number(selectedQuadIndex) : undefined
+      }).unwrap();
+      
+      toast.success(`Product moved to home section`);
+      setIsMoveToHomeOpen(false);
+      setMovingProduct(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to move product");
     }
   }
 
@@ -362,6 +407,10 @@ export default function ProductsTable() {
                                   <BarChart3 className="w-4 h-4 mr-2" />
                                   Manage Reviews
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMoveToHome(product)}>
+                                  <Home className="w-4 h-4 mr-2" />
+                                  Move to Home
+                                </DropdownMenuItem>
                                 <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(product._id)}>
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Delete
@@ -480,6 +529,89 @@ export default function ProductsTable() {
         onOpenChange={setIsReviewModalOpen}
         productId={reviewProductId as string}
       />
+
+      <Dialog open={isMoveToHomeOpen} onOpenChange={setIsMoveToHomeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Product to Home Section</DialogTitle>
+            <DialogDescription>
+              Select a section on the homepage where you want to display <strong>{movingProduct?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Homepage Section</label>
+              <Select value={selectedSection} onValueChange={setSelectedSection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectionsLoading ? (
+                    <SelectItem value="loading" disabled>Loading sections...</SelectItem>
+                  ) : (
+                    homeSections?.map(section => (
+                      <SelectItem key={section.id} value={section.id}>
+                        {section.heading} ({section.type})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {homeSections?.find(s => s.id === selectedSection)?.type === 'quad_grid' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Card Position</label>
+                <Select value={selectedQuadIndex} onValueChange={setSelectedQuadIndex}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Card" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {homeSections?.find(s => s.id === selectedSection)?.quadCards?.map((card : any) => (
+                      <SelectItem key={card.index} value={card.index.toString()}>
+                        {card.title} (Position {card.index + 1})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {homeSections?.find(s => s.id === selectedSection)?.type === 'single_product_carousel' && (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Select Display Slot</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedQuadIndex(idx.toString())}
+                      className={`
+                        cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all
+                        ${selectedQuadIndex === idx.toString() 
+                          ? "border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500/20" 
+                          : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-200"}
+                      `}
+                    >
+                      <span className={`text-lg font-bold ${selectedQuadIndex === idx.toString() ? "text-blue-600" : "text-slate-400"}`}>
+                        {idx + 1}
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wider font-bold opacity-60">Slot</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMoveToHomeOpen(false)}>Cancel</Button>
+            <Button onClick={executeMoveToHome} disabled={!selectedSection}>
+              Confirm Move
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>

@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { addShippingInfo } from '@/redux/reducer/cartReducer';
+import { useAddAddressMutation, useGetAddressesQuery } from '@/redux/api/addressApi';
 import { CheckoutSteps } from './CheckoutSteps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,12 +64,36 @@ export function Shipping() {
     },
   });
 
+  const { data: addresses } = useGetAddressesQuery();
+  const [addAddress] = useAddAddressMutation();
+
   const onSubmit = async (data: ShippingFormData) => {
     const shippingData = {
       ...data,
       pinCode: parseInt(data.pinCode),
       phoneNo: parseInt(data.phoneNo),
     };
+
+    // Save to user's address book if it's new
+    if (user) {
+      const addressExists = addresses?.some((addr: any) => 
+        addr.address.toLowerCase() === data.address.toLowerCase() && 
+        addr.pinCode === Number(data.pinCode)
+      );
+
+      if (!addressExists) {
+        try {
+          await addAddress({ 
+            ...data, 
+            pinCode: Number(data.pinCode),
+            isDefault: !addresses || addresses.length === 0 
+          }).unwrap();
+        } catch (error) {
+          console.error("Failed to save address to profile:", error);
+        }
+      }
+    }
+
     dispatch(addShippingInfo(shippingData as any));
     router.push('/order-summary');
   };

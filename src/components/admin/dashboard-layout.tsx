@@ -39,6 +39,7 @@ import {
   MoreVertical,
   MessageSquare,
   Ticket,
+  Megaphone,
 } from "lucide-react"
 import dynamic from "next/dynamic"
 const ThemeToggle = dynamic(() => import("./theme-toggle").then(mod => mod.ThemeToggle), { ssr: false })
@@ -73,6 +74,7 @@ const navigationGroups = [
       { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
       { title: "Products", href: "/admin/products", icon: Package },
       { title: "Customers", href: "/admin/customers", icon: Users },
+      { title: "Smart Campaigns", href: "/admin/campaigns", icon: Megaphone },
       { title: "Coupons", href: "/admin/coupons", icon: Ticket },
       { title: "Sales & Revenue", href: "/admin/sales", icon: TrendingUp },
       { title: "Issues", href: "/admin/issues", icon: MessageSquare },
@@ -201,7 +203,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
 function SidebarNavItems({ pathname }: { pathname: string }) {
   const { setOpenMobile } = useSidebar()
-  
+
   return (
     <>
       {[
@@ -218,6 +220,7 @@ function SidebarNavItems({ pathname }: { pathname: string }) {
             { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
             { title: "Products", href: "/admin/products", icon: Package },
             { title: "Customers", href: "/admin/customers", icon: Users },
+            { title: "Smart Campaigns", href: "/admin/campaigns", icon: Megaphone },
             { title: "Coupons", href: "/admin/coupons", icon: Ticket },
             { title: "Sales & Revenue", href: "/admin/sales", icon: TrendingUp },
             { title: "Issues", href: "/admin/issues", icon: MessageSquare },

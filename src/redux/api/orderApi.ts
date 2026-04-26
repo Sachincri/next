@@ -52,6 +52,11 @@ export const orderApi = apiSlice.injectEndpoints({
             providesTags: (result, error, id) => [{ type: "Order", id }],
             transformResponse: (response: any) => response.data.order,
         }),
+        getOrderTracking: builder.query<any, string>({
+            query: (id) => `/orders/${id}/tracking`,
+            providesTags: (result, error, id) => [{ type: "Order", id: `Tracking-${id}` }],
+            transformResponse: (response: any) => response.data.tracking,
+        }),
         createStripePaymentIntent: builder.mutation<{ clientSecret: string; paymentIntentId: string }, any>({
             query: (body) => ({
                 url: "/payment/stripe/create-intent",
@@ -76,6 +81,7 @@ export const {
     useVerifyPaymentMutation,
     useGetMyOrdersQuery,
     useGetOrderDetailsQuery,
+    useGetOrderTrackingQuery,
     useGetRazorpayKeyQuery,
     useCreateRazorpayOrderMutation,
     useCreateStripePaymentIntentMutation,

@@ -13,6 +13,9 @@ import { useSocket } from '@/contexts/socket-context';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import toast from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
+import { useGetMyNotificationsQuery, useMarkAllAsReadMutation } from "@/redux/api/userApi";
+import { useAppSelector } from "@/redux/hooks";
+import { RootState } from "@/redux/store";
 
 interface Notification {
     id: string;
@@ -26,15 +29,35 @@ interface Notification {
 
 export function NotificationsPopover() {
     const { socket, isConnected, joinAdminRoom } = useSocket();
+    const { user } = useAppSelector((state: RootState) => state.user);
+    const { data, refetch } = useGetMyNotificationsQuery();
+    const [markAllAsReadApi] = useMarkAllAsReadMutation();
+    
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
-        if (isConnected) {
+        if (data?.notifications) {
+            const mapped = data.notifications.map((n: any) => ({
+                id: n._id,
+                title: n.title,
+                message: n.message,
+                type: (n.type?.includes("stock") ? "warning" : n.type?.includes("error") ? "error" : "info") as Notification['type'], // simplistic mapping
+                timestamp: new Date(n.createdAt),
+                read: n.read,
+                link: n.data?.orderId ? `/order/${n.data.orderId}` : undefined,
+            }));
+            setNotifications(mapped);
+            setUnreadCount(data.unreadCount || 0);
+        }
+    }, [data]);
+
+    useEffect(() => {
+        if (isConnected && user?.role === 'admin') {
             joinAdminRoom();
         }
-    }, [isConnected, joinAdminRoom]);
+    }, [isConnected, joinAdminRoom, user]);
 
     useEffect(() => {
         if (!socket) return;
@@ -74,18 +97,30 @@ export function NotificationsPopover() {
             toast("Low Stock Alert", { icon: "⚠️" });
         });
 
+        socket.on("notification:new", (newNotif: any) => {
+            // General notification event
+            refetch();
+            toast.success(newNotif.title || "New Notification");
+        });
+
         // Cleanup listeners
         return () => {
             socket.off("order:created");
             socket.off("stock:low");
+            socket.off("notification:new");
         };
-    }, [socket]);
+    }, [socket, refetch]);
 
-    const markAllAsRead = () => {
-        setNotifications((prev) =>
-            prev.map((n) => ({ ...n, read: true }))
-        );
-        setUnreadCount(0);
+    const markAllAsRead = async () => {
+        try {
+            await markAllAsReadApi().unwrap();
+            setNotifications((prev) =>
+                prev.map((n) => ({ ...n, read: true }))
+            );
+            setUnreadCount(0);
+        } catch (error) {
+            console.error("Failed to mark read:", error);
+        }
     };
 
     return (

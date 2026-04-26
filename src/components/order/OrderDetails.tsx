@@ -3,15 +3,20 @@
 import React, { useEffect } from "react";
 import { useParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { useGetOrderDetailsQuery } from "@/redux/api/orderApi";
+import { useGetOrderDetailsQuery, useGetOrderTrackingQuery } from "@/redux/api/orderApi";
 import { Loader } from "@/components/layout/Loader";
 import { Header } from "@/components/layout/Header";
-import { Download, Phone, Star } from "lucide-react";
+import { Download, Phone, Star, Truck } from "lucide-react";
 import { OrderTracker } from "./TrackStepper";
 
 const OrderDetails = () => {
   const params = useParams<{ id: string }>();
   const { data: order, isLoading: loading, error } = useGetOrderDetailsQuery(params?.id as string, { skip: !params?.id });
+
+  const isAutomatedShipment = order?.shipment && order.shipment.provider !== "manual";
+  const { data: trackingData } = useGetOrderTrackingQuery(params?.id as string, { 
+    skip: !params?.id || !isAutomatedShipment 
+  });
 
   useEffect(() => {
     if (error) {
@@ -22,6 +27,7 @@ const OrderDetails = () => {
   const getOrderStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'delivered': return 'bg-green-50 text-green-700';
+      case 'ordered': return 'bg-amber-50 text-amber-700';
       case 'processing': return 'bg-blue-50 text-blue-700';
       case 'shipped': return 'bg-indigo-50 text-indigo-700';
       case 'cancelled': return 'bg-red-50 text-red-700';
@@ -97,6 +103,7 @@ const OrderDetails = () => {
                   processingAt={order?.processingAt || order?.createdAt || ''}
                   shippedAt={order?.shippedAt}
                   deliveredAt={order?.deliveredAt}
+                  trackingData={trackingData}
                 />
 
                 {/* Delivery Address */}
@@ -112,6 +119,35 @@ const OrderDetails = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Shipment Details */}
+                {order?.shipment && order.shipment.provider !== "manual" && order.shipment.trackingUrl && (
+                  <div className="bg-white rounded-lg shadow-sm p-6 border border-blue-100 bg-blue-50/30">
+                    <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                       <Truck className="w-5 h-5" />
+                       Shipment Tracking
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Courier Partner</span>
+                        <span className="font-medium text-gray-900">{order.shipment.courierName || "Assigning..."}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Tracking Number</span>
+                        <span className="font-mono text-gray-900">{order.shipment.awbNumber || "Generating..."}</span>
+                      </div>
+                      <a 
+                        href={order.shipment.trackingUrl} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="mt-3 block text-center bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+                      >
+                        Track Package Live
+                      </a>
+                    </div>
+                  </div>
+                )}
+
               </div>
 
               {/* Sidebar */}

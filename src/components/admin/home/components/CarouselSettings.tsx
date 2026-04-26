@@ -35,6 +35,12 @@ export const CarouselSettings: FC<CarouselSettingsProps> = ({
             onToggle={onToggle}
         >
             <div className="space-y-6">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
+                    <ImageIcon size={14} className="text-blue-500 flex-shrink-0" />
+                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                        Recommended size: <strong>1920 × 600 px</strong> (ratio 3.2:1). Mobile: 160px height, Desktop: 288px height. Use full-width landscape images.
+                    </p>
+                </div>
                 {carousel.items.map((item, idx) => (
                     <div
                         key={idx}
@@ -109,6 +115,10 @@ export const CarouselSettings: FC<CarouselSettingsProps> = ({
                                     <RedirectLinkBuilder
                                         value={item.redirectLink || ""}
                                         onChange={(val) => updateCarouselItem(idx, "redirectLink", val)}
+                                        onSelectDetailed={(data) => {
+                                            if (data.name && !item.title) updateCarouselItem(idx, "title", data.name);
+                                            if (data.image && !item.image) updateCarouselItem(idx, "image", data.image);
+                                        }}
                                     />
                                     {validationErrors[`carousel.items.${idx}.redirectLink`] && (
                                         <ErrorBadge message={validationErrors[`carousel.items.${idx}.redirectLink`]} />

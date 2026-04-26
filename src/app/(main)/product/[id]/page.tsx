@@ -123,24 +123,13 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
               <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 lg:p-6 shadow-sm border border-slate-100 dark:border-slate-800">
                 <ProductGallery product={product} />
               </div>
-
-              {/* Action Buttons (Desktop Only) */}
-              <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
-                <ProductActionButtons {...commonProps} showOnly="buttons" />
-              </div>
             </section>
 
             {/* Right Column - Info & Selectors */}
             <section className="lg:col-span-5 space-y-8">
               <ProductInfoServer product={product} breadcrumbLinks={breadcrumbLinks} />
 
-              <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 space-y-6">
-                <ProductActionButtons {...commonProps} showOnly="color" />
-                <ProductActionButtons {...commonProps} showOnly="size" />
-              </div>
-
-              {/* Mobile View: Show all buttons below info */}
-              <div className="lg:hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
                 <ProductActionButtons {...commonProps} />
               </div>
             </section>

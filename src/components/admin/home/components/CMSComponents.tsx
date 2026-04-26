@@ -76,7 +76,8 @@ export const ImageUploadField: FC<{
     label: string;
     error?: string;
     required?: boolean;
-}> = ({ value, onChange, label, error, required = false }) => {
+    acceptType?: "image" | "video" | "both";
+}> = ({ value, onChange, label, error, required = false, acceptType = "image" }) => {
     return (
         <div className="space-y-3">
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
@@ -85,6 +86,7 @@ export const ImageUploadField: FC<{
             <ImageDropzone
                 value={value}
                 onChange={(file, previewUrl) => onChange(previewUrl || "", file || undefined)}
+                acceptType={acceptType}
             />
             {error && <ErrorBadge message={error} />}
         </div>

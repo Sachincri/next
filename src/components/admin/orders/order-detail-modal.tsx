@@ -119,8 +119,8 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
         return <CheckCircle className="w-5 h-5 text-green-600" />
       case "shipped":
         return <Truck className="w-5 h-5 text-blue-600" />
-      case "placed":
-        return <Clock className="w-5 h-5 text-blue-600" />
+      case "ordered":
+        return <Clock className="w-5 h-5 text-amber-600" />
       case "processing":
         return <Package className="w-5 h-5 text-orange-600" />
       case "refunded":
@@ -255,6 +255,51 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                   )}
                 </CardContent>
               </Card>
+              {/* Shipment Tracking Information */}
+              {order.shipment && order.shipment.provider !== "manual" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Truck className="w-5 h-5" />
+                      Shipment & Tracking
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Provider</p>
+                        <p className="font-medium capitalize">{order.shipment.provider}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Courier Partner</p>
+                        <p className="font-medium">{order.shipment.courierName || "Assigning..."}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">AWB Number</p>
+                        <p className="font-mono text-sm">{order.shipment.awbNumber || "Generating..."}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Estimated Delivery</p>
+                        <p className="font-medium">
+                          {order.shipment.estimatedDelivery 
+                            ? new Date(order.shipment.estimatedDelivery).toLocaleDateString() 
+                            : "Calculating..."}
+                        </p>
+                      </div>
+                    </div>
+                    {order.shipment.trackingUrl && (
+                       <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        onClick={() => window.open(order.shipment.trackingUrl, '_blank')}
+                      >
+                        Track Package
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Order Timeline & Actions */}
@@ -303,11 +348,11 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="placed">Placed</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                      <SelectItem value="shipped">Shipped</SelectItem>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="Ordered">Ordered</SelectItem>
+                      <SelectItem value="Processing">Processing</SelectItem>
+                      <SelectItem value="Shipped">Shipped</SelectItem>
+                      <SelectItem value="Delivered">Delivered</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

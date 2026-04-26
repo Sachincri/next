@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import DashboardLayout from "@/components/admin/dashboard-layout";
 import { useGetCouponsQuery, useCreateCouponMutation, useDeleteCouponMutation } from "@/redux/api/adminApi";
 import { Plus, Trash2, Ticket, Calendar, Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -119,7 +118,7 @@ export default function CouponsPage() {
     );
 
     return (
-        <DashboardLayout>
+        <>
             <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
@@ -353,6 +352,6 @@ export default function CouponsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </DashboardLayout>
+        </>
     );
 }

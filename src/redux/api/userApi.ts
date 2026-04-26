@@ -101,6 +101,25 @@ export const userApi = apiSlice.injectEndpoints({
             providesTags: ["User"],
             transformResponse: (response: ApiResponse<unknown>) => response.data,
         }),
+        getMyNotifications: builder.query<{ notifications: any[]; unreadCount: number }, void>({
+            query: () => "/notifications",
+            providesTags: ["User"],
+            transformResponse: (response: ApiResponse<{ notifications: any[]; unreadCount: number }>) => response.data || { notifications: [], unreadCount: 0 },
+        }),
+        markAsRead: builder.mutation<ApiResponse<null>, string>({
+            query: (id) => ({
+                url: `/notifications/${id}/read`,
+                method: "PATCH",
+            }),
+            invalidatesTags: ["User"],
+        }),
+        markAllAsRead: builder.mutation<ApiResponse<null>, void>({
+            query: () => ({
+                url: "/notifications/read-all",
+                method: "PATCH",
+            }),
+            invalidatesTags: ["User"],
+        }),
     }),
 });
 
@@ -118,5 +137,7 @@ export const {
     useResetPasswordMutation,
     useGetCoinHistoryQuery,
     useGetMyReviewsQuery,
+    useGetMyNotificationsQuery,
+    useMarkAsReadMutation,
+    useMarkAllAsReadMutation,
 } = userApi;
-

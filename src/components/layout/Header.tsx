@@ -15,8 +15,13 @@ import { useGetHomePageDataQuery } from '@/redux/api/homeApi';
 import { useGetCartQuery } from '@/redux/api/cartApi';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import { ShieldCheck } from 'lucide-react';
 
 export function Header() {
+  const pathname = usePathname();
+  const isCheckoutPage = ['/shipping', '/order-summary', '/payment'].includes(pathname);
+
   const { cartItems } = useAppSelector((state: RootState) => state.cart);
   const { isAuthenticated, user } = useAppSelector((state: RootState) => state.user);
   const { data: homeData } = useGetHomePageDataQuery();
@@ -61,7 +66,7 @@ export function Header() {
 
   const userMenuItems = [
     { icon: <User className="w-4 h-4" />, name: 'My Account', path: '/me' },
-    { icon: <Package className="w-4 h-4" />, name: 'My Orders', path: '/order' },
+    { icon: <Package className="w-4 h-4" />, name: 'My Orders', path: '/me?tab=orders' },
     { icon: <ShoppingCart className="w-4 h-4" />, name: 'My Cart', path: '/cart' },
     { icon: <Heart className="w-4 h-4" />, name: 'WishList', path: '/wishlist' },
   ];
@@ -83,8 +88,37 @@ export function Header() {
     }
   };
 
+  if (isCheckoutPage) {
+    return (
+      <nav className="bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md">
+        <div className="container-custom">
+          <div className="flex justify-between items-center h-20 px-4 md:px-8">
+            <Link href="/" className="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors">
+              {logoUrl ? (
+                <div className="relative h-14 w-30 md:w-48">
+                  <Image src={logoUrl} alt="Logo" fill style={{ objectFit: 'cover', objectPosition: 'left' }} priority />
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold tracking-tight">E-Store</span>
+                  <span className="text-[10px] opacity-80 flex items-center">
+                    Explore <span className="text-yellow-400 font-bold ml-1 italic">Plus</span>
+                  </span>
+                </div>
+              )}
+            </Link>
+            <div className="flex items-center space-x-2 text-green-400">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span className="font-bold text-sm sm:text-base">100% Secure Checkout</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   return (
-    <nav className={`bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md transition-transform duration-300 ease-in-out ${!isVisible ? '-translate-y-full md:translate-y-0' : 'translate-y-0'}`}>
+    <nav className={`bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md transition-transform duration-300 ease-in-out translate-y-0`}>
       <div className="container-custom">
         <div className="flex justify-between md:justify-center items-center h-20 md:gap-8">
           {/* Mobile menu & Logo Group */}
@@ -122,8 +156,8 @@ export function Header() {
 
           {/* User menu */}
           <div className="flex items-center space-x-4 sm:space-x-8">
-            {/* Admin Notifications */}
-            {mounted && user && user.role === 'admin' && (
+            {/* User Notifications */}
+            {mounted && isAuthenticated && (
               <div className="text-white">
                 <NotificationsPopover />
               </div>

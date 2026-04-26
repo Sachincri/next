@@ -86,15 +86,15 @@ export const HomeProducts: React.FC<ProductSliderProps> = ({ products }) => {
             {products.items.map(product => (
               <Link href={product.redirectLink}
                 key={product.id}
-                className="bg-white dark:bg-slate-800 text-center flex-shrink-0 w-32 transition-all duration-300 group cursor-pointer snap-start"
+                className="bg-white dark:bg-slate-800 text-center flex-shrink-0 w-36 sm:w-40 transition-all duration-300 group cursor-pointer snap-start"
               >
-                <div className="relative overflow-hidden bg-gray-100 dark:bg-slate-700 rounded-md h-32">
+                <div className="relative overflow-hidden rounded-md aspect-[4/5] mb-2">
                   <Image
                     src={product.image}
                     alt={product.title}
                     fill
                     className="object-contain group-hover:scale-105 transition-transform duration-300"
-                    sizes="128px"
+                    sizes="160px"
                   />
                 </div>
                 <div className="p-2">
@@ -119,12 +119,12 @@ export const HomeProducts: React.FC<ProductSliderProps> = ({ products }) => {
                   key={product.id}
                   className="bg-white dark:bg-slate-800 text-center transition-all duration-300 group cursor-pointer"
                 >
-                  <div className="relative overflow-hidden bg-gray-100 dark:bg-slate-700 rounded-md h-32 sm:h-36 md:h-60">
+                  <div className="relative overflow-hidden rounded-md aspect-[4/5] mb-2">
                     <Image
                       src={product.image}
                       alt={product.title}
                       fill
-                      className="object-contain group-hover:scale-102 transition-transform duration-300"
+                      className="object-contain group-hover:scale-105 transition-transform duration-300"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 16vw"
                     />
                   </div>

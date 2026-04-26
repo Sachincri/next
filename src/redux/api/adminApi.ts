@@ -221,6 +221,39 @@ export const adminApi = apiSlice.injectEndpoints({
             providesTags: ["Admin"],
             transformResponse: (response: any) => response.data,
         }),
+        generateCampaignData: builder.mutation<{ pushTitle?: string; pushBody?: string; pushDeepLink?: string; whatsappText?: string; whatsappButtons?: string[]; emailSubject?: string; emailHtml?: string; imageUrl?: string | null; storeName?: string; storeLogo?: string }, { topic: string; type: string; channels: string[] }>({
+            query: (args) => ({
+                url: `/campaigns/generate`,
+                method: "POST",
+                body: args
+            }),
+            transformResponse: (response: any) => response.data,
+        }),
+        broadcastCampaign: builder.mutation<{ status: string; message: string }, { audienceType: string; channels: string[]; payload: any }>({
+            query: (args) => ({
+                url: `/campaigns/broadcast`,
+                method: "POST",
+                body: args
+            }),
+            transformResponse: (response: any) => ({
+                status: response.status,
+                message: response.message
+            }),
+        }),
+        getHomeSections: builder.query<{ id: string; type: string; heading: string; quadCards?: { index: number; title: string }[] }[], void>({
+            query: () => "/home/cms/sections/metadata",
+            providesTags: ["Admin"],
+            transformResponse: (response: any) => response.data,
+        }),
+        addProductToHomeSection: builder.mutation<{ message: string }, { productId: string; sectionId: string; quadIndex?: number }>({
+            query: (data) => ({
+                url: "/home/cms/sections/add-product",
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Admin"],
+            transformResponse: (response: any) => ({ message: response.message }),
+        }),
     }),
 });
 
@@ -255,4 +288,8 @@ export const {
     useAssignCouponMutation,
     useValidateCouponMutation,
     useGetRealtimeAnalyticsQuery,
+    useGenerateCampaignDataMutation,
+    useBroadcastCampaignMutation,
+    useGetHomeSectionsQuery,
+    useAddProductToHomeSectionMutation,
 } = adminApi;

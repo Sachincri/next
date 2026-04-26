@@ -21,9 +21,9 @@ export function middleware(request: NextRequest) {
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    response.headers.set('X-Next-CSP', 'active');
 
-    // Content Security Policy
+    // Content Security Policy origin resolution
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
     let serverOrigin = 'http://localhost:5000';
     try {
@@ -32,14 +32,29 @@ export function middleware(request: NextRequest) {
         // Fallback
     }
 
+    // Enhanced Permissions-Policy for social media embeds
+    const permissionsPolicy = [
+        'camera=()',
+        'microphone=()',
+        'geolocation=()',
+        'autoplay=(self "https://www.instagram.com" "https://*.instagram.com" "https://www.tiktok.com" "https://*.tiktok.com" "https://www.youtube.com" "https://*.youtube.com")',
+        'encrypted-media=(self "https://www.instagram.com" "https://*.instagram.com" "https://www.tiktok.com" "https://*.tiktok.com" "https://www.youtube.com" "https://*.youtube.com")',
+        'picture-in-picture=(self "https://www.instagram.com" "https://*.instagram.com" "https://www.tiktok.com" "https://*.tiktok.com" "https://www.youtube.com" "https://*.youtube.com")',
+        'fullscreen=(self "https://www.instagram.com" "https://*.instagram.com" "https://www.tiktok.com" "https://*.tiktok.com" "https://www.youtube.com" "https://*.youtube.com")'
+    ].join(', ');
+    response.headers.set('Permissions-Policy', permissionsPolicy);
+
     const cspHeader = `
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://js.stripe.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        img-src 'self' blob: data: https://res.cloudinary.com https://*.razorpay.com;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://js.stripe.com https://www.instagram.com https://*.instagram.com https://*.cdninstagram.com https://www.tiktok.com https://*.tiktok.com https://www.youtube.com https://s.ytimg.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.instagram.com https://*.instagram.com;
+        img-src 'self' blob: data: https://res.cloudinary.com https://*.cloudinary.com https://*.razorpay.com https://*.instagram.com https://*.fbcdn.net https://*.tiktok.com https://*.ytimg.com https://*.googleusercontent.com;
+        media-src 'self' blob: data: https://res.cloudinary.com https://*.cloudinary.com https://*.instagram.com https://*.tiktok.com;
         font-src 'self' https://fonts.gstatic.com;
-        frame-src 'self' https://api.razorpay.com https://js.stripe.com;
-        connect-src 'self' ${serverOrigin} https://api.razorpay.com;
+        frame-src 'self' https://api.razorpay.com https://js.stripe.com https://www.instagram.com https://*.instagram.com https://www.tiktok.com https://*.tiktok.com https://www.youtube.com https://*.youtube.com https://www.youtube-nocookie.com;
+        child-src 'self' blob: https://www.instagram.com https://*.instagram.com https://www.tiktok.com https://*.tiktok.com https://www.youtube.com https://*.youtube.com;
+        connect-src 'self' ${serverOrigin} https://api.razorpay.com https://*.instagram.com https://*.tiktok.com;
+        frame-ancestors 'self';
     `.replace(/\s{2,}/g, ' ').trim();
     response.headers.set('Content-Security-Policy', cspHeader);
 

@@ -61,7 +61,37 @@ export default function SettingsTabs() {
     emailService: "brevo",
     aiChatEnabled: true,
     aiSuggestionsEnabled: true,
-    brevoApiKey: ""
+    brevoApiKey: "",
+    cancellationPolicy: "",
+    refundPolicy: "",
+    aiCallCodVerificationEnabled: false,
+    aiCallReviewCollectionEnabled: false,
+    aiCallAbandonedCartEnabled: false,
+    aiCallSupportEnabled: false,
+    aiReviewCondition: "Provide a Video Review",
+    aiReviewRewardType: "Percentage",
+    aiReviewRewardValue: 50,
+    whatsappSupportEnabled: false,
+    whatsappToken: "",
+    whatsappPhoneNumberId: "",
+    whatsappVerifyToken: "",
+    whatsappAppSecret: "",
+    taxEnabled: false,
+    taxRate: 0,
+    gstRate: 18,
+    gatewayFeeRate: 2,
+    shippingProvider: "manual" as "manual" | "shiprocket" | "delhivery",
+    shiprocketEnabled: false,
+    shiprocketEmail: "",
+    shiprocketPassword: "",
+    shiprocketChannelId: "",
+    delhiveryEnabled: false,
+    delhiveryApiToken: "",
+    delhiveryWarehouseName: "",
+    defaultBoxLength: 20,
+    defaultBoxBreadth: 15,
+    defaultBoxHeight: 10,
+    defaultBoxWeight: 0.5
   })
 
   const [profileData, setProfileData] = useState({
@@ -94,7 +124,37 @@ export default function SettingsTabs() {
         emailService: settings.emailService || "brevo",
         aiChatEnabled: settings.aiChatEnabled ?? true,
         aiSuggestionsEnabled: settings.aiSuggestionsEnabled ?? true,
-        brevoApiKey: settings.brevoApiKey || ""
+        brevoApiKey: settings.brevoApiKey || "",
+        cancellationPolicy: settings.cancellationPolicy || "",
+        refundPolicy: settings.refundPolicy || "",
+        aiCallCodVerificationEnabled: settings.aiCallCodVerificationEnabled ?? false,
+        aiCallReviewCollectionEnabled: settings.aiCallReviewCollectionEnabled ?? false,
+        aiCallAbandonedCartEnabled: settings.aiCallAbandonedCartEnabled ?? false,
+        aiCallSupportEnabled: settings.aiCallSupportEnabled ?? false,
+        aiReviewCondition: settings.aiReviewCondition || "Provide a Video Review",
+        aiReviewRewardType: settings.aiReviewRewardType || "Percentage",
+        aiReviewRewardValue: settings.aiReviewRewardValue || 50,
+        whatsappSupportEnabled: settings.whatsappSupportEnabled ?? false,
+        whatsappToken: settings.whatsappToken || "",
+        whatsappPhoneNumberId: settings.whatsappPhoneNumberId || "",
+        whatsappVerifyToken: settings.whatsappVerifyToken || "",
+        whatsappAppSecret: settings.whatsappAppSecret || "",
+        taxEnabled: settings.taxEnabled ?? false,
+        taxRate: settings.taxRate || 0,
+        gstRate: settings.gstRate || 18,
+        gatewayFeeRate: settings.gatewayFeeRate || 2,
+        shippingProvider: settings.shippingProvider || "manual",
+        shiprocketEnabled: settings.shiprocketEnabled ?? false,
+        shiprocketEmail: settings.shiprocketEmail || "",
+        shiprocketPassword: settings.shiprocketPassword || "",
+        shiprocketChannelId: settings.shiprocketChannelId || "",
+        delhiveryEnabled: settings.delhiveryEnabled ?? false,
+        delhiveryApiToken: settings.delhiveryApiToken || "",
+        delhiveryWarehouseName: settings.delhiveryWarehouseName || "",
+        defaultBoxLength: settings.defaultBoxLength || 20,
+        defaultBoxBreadth: settings.defaultBoxBreadth || 15,
+        defaultBoxHeight: settings.defaultBoxHeight || 10,
+        defaultBoxWeight: settings.defaultBoxWeight || 0.5
       }))
     }
   }, [settings])
@@ -560,6 +620,220 @@ export default function SettingsTabs() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Tax & Gateway Preferences
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="taxEnabled">Enable Tax Deductions</Label>
+                    <p className="text-xs text-muted-foreground">Calculate GST & Fees for accurate Net Profit</p>
+                  </div>
+                  <Switch
+                    id="taxEnabled"
+                    checked={formData.taxEnabled}
+                    onCheckedChange={(checked) => handleSwitchChange("taxEnabled", checked)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gstRate">GST Rate (%)</Label>
+                  <Input
+                    id="gstRate"
+                    type="number"
+                    value={formData.gstRate}
+                    onChange={handleInputChange}
+                    placeholder="18"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxRate">Additional Tax Rate (%)</Label>
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    value={formData.taxRate}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">Extra tax (e.g., local state tax) applied with GST</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gatewayFeeRate">Payment Gateway Fee (%)</Label>
+                  <Input
+                    id="gatewayFeeRate"
+                    type="number"
+                    step="0.1"
+                    value={formData.gatewayFeeRate}
+                    onChange={handleInputChange}
+                    placeholder="2"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Truck className="w-5 h-5" />
+                  Shipping Integration
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Connect with a shipping provider for automated order fulfillment, tracking & label generation</p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Provider Selector */}
+                <div className="space-y-2">
+                  <Label>Active Shipping Provider</Label>
+                  <Select value={formData.shippingProvider} onValueChange={(val: "manual" | "shiprocket" | "delhivery") => setFormData(p => ({ ...p, shippingProvider: val }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual (No Integration)</SelectItem>
+                      <SelectItem value="shiprocket">Shiprocket</SelectItem>
+                      <SelectItem value="delhivery">Delhivery</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Select which provider handles your shipments. Only one can be active at a time.</p>
+                </div>
+
+                <Separator />
+
+                {/* Default Box Dimensions */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-sm">Default Package Dimensions</h4>
+                    <p className="text-xs text-muted-foreground">Used as fallback if individual product weight/size is missing.</p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultBoxLength">Length (cm)</Label>
+                      <Input id="defaultBoxLength" type="number" value={formData.defaultBoxLength} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultBoxBreadth">Breadth (cm)</Label>
+                      <Input id="defaultBoxBreadth" type="number" value={formData.defaultBoxBreadth} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultBoxHeight">Height (cm)</Label>
+                      <Input id="defaultBoxHeight" type="number" value={formData.defaultBoxHeight} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultBoxWeight">Weight (kg)</Label>
+                      <Input id="defaultBoxWeight" type="number" step="0.1" value={formData.defaultBoxWeight} onChange={handleInputChange} />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Shiprocket Section */}
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                        <Truck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Shiprocket</h4>
+                        <p className="text-xs text-muted-foreground">India's #1 eCommerce shipping solution</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {formData.shiprocketEnabled && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[10px]">Configured</Badge>}
+                      <Switch
+                        checked={formData.shiprocketEnabled}
+                        onCheckedChange={(checked) => handleSwitchChange("shiprocketEnabled", checked)}
+                      />
+                    </div>
+                  </div>
+                  {formData.shiprocketEnabled && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="shiprocketEmail">Shiprocket Email</Label>
+                        <Input
+                          id="shiprocketEmail"
+                          type="email"
+                          value={formData.shiprocketEmail}
+                          onChange={handleInputChange}
+                          placeholder="your@shiprocket-email.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shiprocketPassword">Shiprocket Password</Label>
+                        <Input
+                          id="shiprocketPassword"
+                          type="password"
+                          value={formData.shiprocketPassword}
+                          onChange={handleInputChange}
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="shiprocketChannelId">Channel ID (Optional)</Label>
+                        <Input
+                          id="shiprocketChannelId"
+                          value={formData.shiprocketChannelId}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 12345"
+                        />
+                        <p className="text-xs text-muted-foreground">Found in Shiprocket Panel → Settings → Channels. Leave empty to use default channel.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Delhivery Section */}
+                <div className="space-y-4 p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <Truck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Delhivery</h4>
+                        <p className="text-xs text-muted-foreground">Enterprise-grade logistics & supply chain</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {formData.delhiveryEnabled && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[10px]">Configured</Badge>}
+                      <Switch
+                        checked={formData.delhiveryEnabled}
+                        onCheckedChange={(checked) => handleSwitchChange("delhiveryEnabled", checked)}
+                      />
+                    </div>
+                  </div>
+                  {formData.delhiveryEnabled && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="delhiveryApiToken">API Token</Label>
+                        <Input
+                          id="delhiveryApiToken"
+                          type="password"
+                          value={formData.delhiveryApiToken}
+                          onChange={handleInputChange}
+                          placeholder="Your Delhivery API Token"
+                        />
+                        <p className="text-xs text-muted-foreground">Generate from Delhivery Developer Portal</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="delhiveryWarehouseName">Warehouse / Pickup Name</Label>
+                        <Input
+                          id="delhiveryWarehouseName"
+                          value={formData.delhiveryWarehouseName}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Main Warehouse"
+                        />
+                        <p className="text-xs text-muted-foreground">Name registered as pickup location in Delhivery</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
 
 
 
@@ -801,6 +1075,141 @@ export default function SettingsTabs() {
                     </li>
                   </ul>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid grid-cols-1 mt-6 gap-6">
+            <Card className="border-indigo-200 shadow-sm">
+              <CardHeader className="bg-indigo-50/50 border-b border-indigo-100">
+                <CardTitle className="text-lg flex items-center gap-2 text-indigo-900">
+                  <Bot className="w-5 h-5" />
+                  Voice AI Assistant (Aura) & Custom Policies
+                </CardTitle>
+                <p className="text-sm text-indigo-700">Configure outbound call triggers and store policies that the AI agent follows.</p>
+              </CardHeader>
+              <CardContent className="space-y-8 pt-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-base border-b pb-2">Outbound Calling Triggers</h3>
+                    
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                      <div className="space-y-0.5 max-w-[70%]">
+                        <Label>COD Phone Verification</Label>
+                        <p className="text-xs text-muted-foreground">Call customers to verify Cash on Delivery orders</p>
+                      </div>
+                      <Switch checked={formData.aiCallCodVerificationEnabled} onCheckedChange={(c) => handleSwitchChange("aiCallCodVerificationEnabled", c)} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                      <div className="space-y-0.5 max-w-[70%]">
+                        <Label>Abandoned Cart Recovery</Label>
+                        <p className="text-xs text-muted-foreground">Call customers who left items in their cart</p>
+                      </div>
+                      <Switch checked={formData.aiCallAbandonedCartEnabled} onCheckedChange={(c) => handleSwitchChange("aiCallAbandonedCartEnabled", c)} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                      <div className="space-y-0.5 max-w-[70%]">
+                        <Label>Customer Support Agent AI</Label>
+                        <p className="text-xs text-muted-foreground">Allow AI to handle order queries using tools</p>
+                      </div>
+                      <Switch checked={formData.aiCallSupportEnabled} onCheckedChange={(c) => handleSwitchChange("aiCallSupportEnabled", c)} />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                      <div className="space-y-0.5 max-w-[70%]">
+                        <Label>Feedback & Review Collection</Label>
+                        <p className="text-xs text-muted-foreground">Call customers after delivery to collect reviews</p>
+                      </div>
+                      <Switch checked={formData.aiCallReviewCollectionEnabled} onCheckedChange={(c) => handleSwitchChange("aiCallReviewCollectionEnabled", c)} />
+                    </div>
+
+                    {formData.aiCallReviewCollectionEnabled && (
+                      <div className="p-4 border rounded-lg bg-indigo-50/30 space-y-4 mt-2">
+                         <div className="space-y-2">
+                           <Label>AI Review Condition (Task)</Label>
+                           <Input id="aiReviewCondition" value={formData.aiReviewCondition} onChange={handleInputChange} placeholder="e.g. Provide a Video Review" />
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                             <Label>Reward Type</Label>
+                             <Select value={formData.aiReviewRewardType} onValueChange={(val) => setFormData(p => ({...p, aiReviewRewardType: val as any}))}>
+                               <SelectTrigger><SelectValue/></SelectTrigger>
+                               <SelectContent>
+                                 <SelectItem value="Percentage">Percentage %</SelectItem>
+                                 <SelectItem value="Fixed">Fixed Amount</SelectItem>
+                               </SelectContent>
+                             </Select>
+                           </div>
+                           <div className="space-y-2">
+                             <Label>Reward Value</Label>
+                             <Input id="aiReviewRewardValue" type="number" value={formData.aiReviewRewardValue} onChange={handleInputChange} />
+                           </div>
+                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-base border-b pb-2">AI Knowledge Base (Policies)</h3>
+                    <p className="text-xs text-muted-foreground">The AI Agent reads these live policies during customer interactions.</p>
+                    
+                    <div className="space-y-2">
+                      <Label>Cancellation Policy</Label>
+                      <Textarea id="cancellationPolicy" value={formData.cancellationPolicy} onChange={handleInputChange} placeholder="Detail when orders can be cancelled..." className="min-h-[100px]" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Refund Policy</Label>
+                      <Textarea id="refundPolicy" value={formData.refundPolicy} onChange={handleInputChange} placeholder="Detail the timeframe and process for refunds..." className="min-h-[100px]" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 mt-6 gap-6">
+            <Card className="border-green-200 shadow-sm">
+              <CardHeader className="bg-green-50/50 border-b border-green-100">
+                <CardTitle className="text-lg flex items-center gap-2 text-green-900">
+                  <Bot className="w-5 h-5" />
+                  WhatsApp Meta Official Support
+                </CardTitle>
+                <p className="text-sm text-green-700">Configure Meta Cloud API to let the AI respond to Customer WhatsApp messages.</p>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                 <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                   <div className="space-y-0.5 max-w-[70%]">
+                     <Label>Enable WhatsApp Support AI</Label>
+                     <p className="text-xs text-muted-foreground">Turn on/off automatic WhatsApp replies to customers.</p>
+                   </div>
+                   <Switch checked={formData.whatsappSupportEnabled} onCheckedChange={(c) => handleSwitchChange("whatsappSupportEnabled", c)} />
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>WhatsApp Permanent Auth Token</Label>
+                      <Input type="password" id="whatsappToken" value={formData.whatsappToken} onChange={handleInputChange} placeholder="EAAI..." />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <Label>Phone Number ID</Label>
+                       <Input id="whatsappPhoneNumberId" value={formData.whatsappPhoneNumberId} onChange={handleInputChange} placeholder="e.g. 123456789012" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <Label>Webhook Verify Token</Label>
+                       <Input id="whatsappVerifyToken" value={formData.whatsappVerifyToken} onChange={handleInputChange} placeholder="Create a custom string" />
+                    </div>
+
+                    <div className="space-y-2">
+                       <Label>App Secret (For Meta Signature)</Label>
+                       <Input type="password" id="whatsappAppSecret" value={formData.whatsappAppSecret} onChange={handleInputChange} placeholder="Required for verifying inbound messages securely" />
+                    </div>
+                 </div>
               </CardContent>
             </Card>
           </div>

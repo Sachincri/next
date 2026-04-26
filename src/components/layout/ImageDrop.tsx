@@ -8,6 +8,7 @@ interface ImageDropzoneProps {
     value?: string | null;
     maxWidth?: number;
     maxHeight?: number;
+    acceptType?: "image" | "video" | "both";
 }
 
 const formatFileSize = (bytes: number): string => {
@@ -18,7 +19,7 @@ const formatFileSize = (bytes: number): string => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value }) => {
+const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value, acceptType = "image" }) => {
     const inputId = useId();
     const [isDragging, setIsDragging] = useState(false);
     const [internalPreview, setInternalPreview] = useState<string | null>(null);
@@ -44,8 +45,14 @@ const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value }) => {
 
         setError(null);
 
-        if (!file.type.startsWith("image/")) {
+        if (acceptType === "image" && !file.type.startsWith("image/")) {
             setError("Please upload a valid image file (SVG, PNG, JPG, GIF).");
+            return;
+        } else if (acceptType === "video" && !file.type.startsWith("video/")) {
+            setError("Please upload a valid video file (MP4, WEBM).");
+            return;
+        } else if (acceptType === "both" && !file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+            setError("Please upload a valid image or video file.");
             return;
         }
 
@@ -94,11 +101,19 @@ const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value }) => {
             >
                 {preview ? (
                     <div className="relative w-full h-auto min-h-[12rem] p-2 flex items-center justify-center overflow-hidden rounded-xl">
-                        <img
-                            src={preview}
-                            alt="Preview"
-                            className="w-full h-auto object-contain rounded-lg max-h-[300px]"
-                        />
+                        {preview && preview.match(/\.(mp4|webm|ogg)$/i) || (fileInfo?.type.startsWith("video/")) ? (
+                            <video
+                                src={preview}
+                                className="w-full h-auto object-contain rounded-lg max-h-[300px]"
+                                controls
+                            />
+                        ) : (
+                            <img
+                                src={preview}
+                                alt="Preview"
+                                className="w-full h-auto object-contain rounded-lg max-h-[300px]"
+                            />
+                        )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white rounded-xl">
                             <UploadCloud className="w-8 h-8" />
                             <span className="text-sm font-medium">Click to change</span>
@@ -124,7 +139,7 @@ const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value }) => {
                             <span className="text-slate-500 dark:text-slate-400">or drag and drop</span>
                         </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500">
-                            SVG, PNG, JPG or GIF (max 5MB)
+                            {acceptType === "video" ? "MP4, WEBM (max 50MB)" : acceptType === "both" ? "Images and Videos" : "SVG, PNG, JPG or GIF (max 5MB)"}
                         </p>
                     </div>
                 )}
@@ -134,7 +149,7 @@ const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value }) => {
                 id={inputId}
                 type="file"
                 className="hidden"
-                accept="image/*"
+                accept={acceptType === "video" ? "video/*" : acceptType === "both" ? "image/*,video/*" : "image/*"}
                 onChange={handleChange}
             />
 

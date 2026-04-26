@@ -9,11 +9,31 @@ export interface DashboardStats {
         lowStockProducts: number;
         lowStockDetails?: any[];
         orders: number;
+        abandonedCarts: number;
+        uncategorizedCount?: number;
+        paymentMethods?: any[];
         revenue: number;
         profit: number;
         avgOrderValue: number;
         conversionRate?: number;
         customerSatisfaction?: number;
+    };
+    stats: {
+        summary: {
+            users: number;
+            products: number;
+            orders: number;
+            abandonedCarts: number;
+            revenue: number;
+            profit: number;
+            avgOrderValue: number;
+            conversionRate?: number;
+            customerSatisfaction?: number;
+        };
+        comparison: {
+            last7Days: { revenueGrowth: number; ordersGrowth: number; profitGrowth: number };
+            last30Days: { revenueGrowth: number; ordersGrowth: number; profitGrowth: number };
+        };
     };
     realTime: {
         today: {
@@ -54,6 +74,7 @@ export interface DashboardStats {
     customers: {
         newCustomers: number;
         returningCustomers: number;
+        vipCustomers?: number;
     };
     ordersByStatus: Record<string, number>;
     topProducts: Array<{
@@ -70,22 +91,39 @@ export interface DashboardStats {
     };
     charts: {
         last7Days: {
-            series: Array<{ date: string; orders: number; revenue: number }>;
+            series: Array<{ date: string; orders: number; revenue: number; profit?: number; grossSales?: number; coinDiscount?: number; shippingFees?: number; refunds?: number; refundCount?: number; customers?: number }>;
         };
         last30Days: {
-            series: Array<{ date: string; orders: number; revenue: number }>;
+            series: Array<{ date: string; orders: number; revenue: number; profit?: number; grossSales?: number; coinDiscount?: number; shippingFees?: number; refunds?: number; refundCount?: number; customers?: number }>;
         };
         last90Days: {
-            series: Array<{ date: string; orders: number; revenue: number }>;
+            series: Array<{ date: string; orders: number; revenue: number; profit?: number; grossSales?: number; coinDiscount?: number; shippingFees?: number; refunds?: number; refundCount?: number; customers?: number }>;
         };
         last12Months: {
-            series: Array<{ month: string; orders: number; revenue: number }>;
+            series: Array<{ month: string; orders: number; revenue: number; profit?: number; grossSales?: number; coinDiscount?: number; shippingFees?: number; refunds?: number; refundCount?: number; customers?: number }>;
         };
     };
     byRegion?: Array<{
         region: string;
         revenue: number;
+        shippingCost?: number;
         orders: number;
+    }>;
+    deductions?: {
+        grossSales: number;
+        cogs: number;
+        totalDiscounts: number;
+        totalShipping: number;
+        totalTax?: number;
+        totalRefunds: number;
+        netProfit: number;
+    };
+    productAlerts?: Array<{
+        productId: string;
+        productName: string;
+        rating: number;
+        refundCount: number;
+        alertType: string;
     }>;
 }
 
@@ -94,7 +132,7 @@ export interface ProductAnalytics {
     outOfStock: number;
     lowStock: number;
     activeProducts: number;
-    topCategories: Array<{ name: string; count: number; revenue?: number }>;
+    topCategories: Array<{ name: string; count: number; revenue?: number; profit?: number }>;
 }
 
 export interface CustomerAnalytics {

@@ -162,6 +162,26 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ params = {} }) => {
     return chips;
   }, [keyword, brand, category, ratings, discount, price, allBrands, allCategories, updateParams, clearBrandFilters, clearRatingFilters, clearDiscountFilters, clearPriceFilters]);
 
+  // Dynamic Breadcrumbs
+  const breadcrumbItems = useMemo(() => {
+    const items: Array<{ label: string; url?: string }> = [
+      { label: 'Home', url: '/' },
+      { label: 'Products', url: '/product' }
+    ];
+    
+    if (category) {
+      const categoryObj = (allCategories as any)?.categories?.find((c: any) => c._id === category) ||
+        (Array.isArray(allCategories) ? allCategories.find((c: any) => c._id === category) : null);
+      if (categoryObj) {
+        items.push({ label: categoryObj.name });
+      }
+    } else if (keyword) {
+      items.push({ label: `Search: ${keyword}` });
+    }
+    
+    return items;
+  }, [category, keyword, allCategories]);
+
   // Pagination
   const totalPages = useMemo(() =>
     Math.ceil((filteredProductsCount || productsCount || products?.length || 0) / (resultPerPage || 20)),
@@ -301,7 +321,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ params = {} }) => {
               <div className="flex-1 min-w-0 p-2 sm:p-4">
                 {/* Top Bar */}
                 <div className="bg-white dark:bg-slate-900 rounded-sm shadow-sm p-3 sm:p-4 mb-3 border border-slate-100 dark:border-slate-800">
-                  <Breadcrumb />
+                  <Breadcrumb items={breadcrumbItems} />
                   <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
                     <div className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">
                       Showing {startResult}–{endResult} of {filteredProductsCount || productsCount || products?.length || 0}+ results

@@ -20,7 +20,7 @@ export function Search() {
       <form onSubmit={searchSubmitHandler} className="relative">
         <input
           type="text"
-          placeholder="Search products & brands..."
+          placeholder="Search for Kurta Sets, Summer Dresses..."
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           className="w-full h-10 pl-4 pr-12 text-sm border border-gray-300  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"

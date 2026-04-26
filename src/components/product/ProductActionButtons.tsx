@@ -106,6 +106,16 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
         router.push("/shipping");
     };
 
+    const [isScrolled, setIsScrolled] = React.useState(false);
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 300);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     const renderColors = () => (
         colors && colors.length > 0 && (
             <div>
@@ -166,7 +176,10 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
         sizes && sizes.length > 0 && (
             <div>
                 <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-sm">Select Size</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-sm flex items-center gap-2">
+                        Select Size 
+                        <span className="text-[10px] font-normal text-gray-500 bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">Model is wearing size S</span>
+                    </h3>
                     <button className="text-blue-600 dark:text-blue-400 text-xs font-medium hover:underline">
                         Size Chart
                     </button>
@@ -212,24 +225,39 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
         </div>
     );
 
-    const renderMobileSticky = () => (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-3 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 flex gap-3 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] pb-safe">
-            <button
-                onClick={stock >= 1 ? addToCartHandler : undefined}
-                disabled={stock < 1}
-                className="flex-1 py-3 px-4 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-bold text-xs flex items-center justify-center gap-2"
-            >
-                <ShoppingCart className="w-4 h-4" />
-                Add to Cart
-            </button>
-            <button
-                onClick={stock >= 1 ? buyNow : undefined}
-                disabled={stock < 1}
-                className="flex-1 py-3 px-4 rounded-xl bg-gray-900 dark:bg-slate-100 text-white dark:text-gray-900 font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-                <Zap className="w-4 h-4 fill-current" />
-                Buy Now
-            </button>
+    const renderSticky = () => (
+        <div className={cn(
+            "fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between p-3 lg:px-8 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] pb-safe transition-transform duration-300",
+            (isScrolled || window.innerWidth < 1024) ? "translate-y-0" : "translate-y-full"
+        )}>
+            <div className="hidden sm:flex items-center gap-4 flex-1">
+                <div className="w-12 h-12 relative rounded-md overflow-hidden border border-gray-100 dark:border-slate-700">
+                    <Image src={thumbnail || '/placeholder.png'} alt={name} fill className="object-cover" />
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-slate-100 line-clamp-1">{name}</span>
+                    <span className="text-base font-bold text-gray-900 dark:text-slate-100">₹{price.toLocaleString()}</span>
+                </div>
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto">
+                <button
+                    onClick={stock >= 1 ? addToCartHandler : undefined}
+                    disabled={stock < 1}
+                    className="flex-1 sm:flex-none sm:w-40 py-3 px-4 rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-bold text-xs flex items-center justify-center gap-2"
+                >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span className="hidden xs:inline">Add to Cart</span>
+                    <span className="xs:hidden">Add</span>
+                </button>
+                <button
+                    onClick={stock >= 1 ? buyNow : undefined}
+                    disabled={stock < 1}
+                    className="flex-1 sm:flex-none sm:w-40 py-3 px-4 rounded-xl bg-gray-900 dark:bg-slate-100 text-white dark:text-gray-900 font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md hover:bg-black dark:hover:bg-white"
+                >
+                    <Zap className="w-4 h-4 fill-current" />
+                    Buy Now
+                </button>
+            </div>
         </div>
     );
 
@@ -237,12 +265,12 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
         <div className="space-y-6">
             {!showOnly && (
                 <>
-                    <div className="hidden lg:block space-y-6">
+                    <div className="space-y-6">
                         {renderColors()}
                         {renderSizes()}
                         {renderButtons()}
                     </div>
-                    {renderMobileSticky()}
+                    {renderSticky()}
                 </>
             )}
 
@@ -251,7 +279,7 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
             {showOnly === "buttons" && (
                 <>
                     {renderButtons()}
-                    {renderMobileSticky()}
+                    {renderSticky()}
                 </>
             )}
         </div>

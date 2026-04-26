@@ -8,6 +8,8 @@ import { CollapsibleSection } from "./CMSComponents";
 interface HeaderSettingsProps {
     headerLogo: string | { url: string; public_id: string } | undefined;
     setHeaderLogo: (val: string | { url: string; public_id: string }) => void;
+    storeName: string;
+    setStoreName: (val: string) => void;
     onSave: () => void;
     isLoading: boolean;
     isOpen: boolean;
@@ -18,6 +20,8 @@ interface HeaderSettingsProps {
 export const HeaderSettings: FC<HeaderSettingsProps> = ({
     headerLogo,
     setHeaderLogo,
+    storeName,
+    setStoreName,
     onSave,
     isLoading,
     isOpen,
@@ -34,7 +38,21 @@ export const HeaderSettings: FC<HeaderSettingsProps> = ({
             onToggle={onToggle}
         >
             <div className="space-y-6">
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                            Store / Brand Name
+                        </label>
+                        <input
+                            type="text"
+                            value={storeName}
+                            onChange={(e) => setStoreName(e.target.value)}
+                            placeholder="e.g. My Premium Store"
+                            className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-900 dark:text-white"
+                        />
+                    </div>
+
+                    <div>
                     <ImageUploadField
                         label="Header Logo"
                         value={logoUrl || ""}
@@ -47,6 +65,7 @@ export const HeaderSettings: FC<HeaderSettingsProps> = ({
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                         Recommended: 250x70px (Desktop), Scale for Mobile
                     </p>
+                    </div>
                 </div>
 
                 <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">

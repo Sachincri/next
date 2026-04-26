@@ -67,10 +67,16 @@ const nextConfig: NextConfig = {
 
   async rewrites() {
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000/api/v1';
+    const serverHost = serverUrl.replace(/\/api\/v1\/?$/, '');
+
     return [
       {
         source: '/api/v1/:path*',
         destination: `${serverUrl}/:path*`,
+      },
+      {
+        source: '/socket.io/:path*',
+        destination: `${serverHost}/socket.io/:path*`,
       },
     ];
   },

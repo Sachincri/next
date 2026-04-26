@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import DashboardLayout from "@/components/admin/dashboard-layout";
 import { useGetAllSupportRequestsQuery } from "@/redux/api/supportApi";
 
 const IssuesTable = dynamic(() => import("@/components/admin/issues/IssuesTable").then(mod => mod.IssuesTable), { ssr: false });
@@ -13,7 +12,6 @@ export default function IssuesPage() {
     const issues = data?.data?.requests || [];
 
     return (
-        <DashboardLayout>
             <div className="p-4 sm:p-8 space-y-8">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -45,6 +43,5 @@ export default function IssuesPage() {
                     </>
                 )}
             </div>
-        </DashboardLayout>
     );
 }

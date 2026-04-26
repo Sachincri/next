@@ -44,6 +44,7 @@ export interface Product {
   };
   images: ProductImage[];
   thumbnail?: ProductImage;
+  videos?: ProductImage[];
   warranty: string;
   category: string | Category;
   brand?: string | Brand;

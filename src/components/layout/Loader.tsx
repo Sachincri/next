@@ -6,10 +6,10 @@ interface LoaderProps {
   fullScreen?: boolean;
 }
 
-export function Loader({ 
-  size = 'md', 
-  text = 'Loading...', 
-  fullScreen = false 
+export function Loader({
+  size = 'md',
+  text = 'Loading...',
+  fullScreen = false
 }: LoaderProps) {
   const sizeclassNamees = {
     sm: 'w-6 h-6',

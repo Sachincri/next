@@ -44,6 +44,7 @@ export const metadata: Metadata = {
 };
 
 import { ChatBot } from '@/components/ai/ChatBot';
+import Script from 'next/script';
 
 export default function RootLayout({
   children,
@@ -82,6 +83,7 @@ export default function RootLayout({
               },
             }}
           />
+          <Script src="https://www.instagram.com/embed.js" strategy="lazyOnload" />
         </Providers>
       </body>
     </html>

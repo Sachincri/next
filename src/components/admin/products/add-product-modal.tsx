@@ -49,6 +49,7 @@ const productSchema = z.object({
   specifications: z.array(specificationSchema).max(20).optional(),
   colors: z.array(colorSchema).max(20).optional(),
   isActive: z.boolean(),
+  homeDisplaySection: z.string().optional(),
   seo: z.object({
     title: z.string().max(60, "SEO Title should be max 60 characters").optional(),
     description: z.string().max(160, "SEO Description should be max 160 characters").optional(),
@@ -212,6 +213,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
       specifications: [],
       colors: [],
       isActive: true,
+      homeDisplaySection: "",
       seo: {
         title: "",
         description: "",
@@ -271,6 +273,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
         specifications: [],
         colors: [],
         isActive: true,
+        homeDisplaySection: "",
         seo: {
           title: "",
           description: "",
@@ -406,6 +409,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
       if (data.discount !== undefined) form.append('discount', String(data.discount))
       if (data.warranty) form.append('warranty', data.warranty)
       if (data.description) form.append('description', data.description)
+      if (data.homeDisplaySection) form.append('homeDisplaySection', data.homeDisplaySection)
       form.append('isActive', String(data.isActive))
 
       if (thumbnailFile) form.append('thumbnail', thumbnailFile)
@@ -560,6 +564,14 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
                       )} />
                       {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
                     </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="homeDisplaySection">Home Display Section (e.g. Best Sellers)</Label>
+                    <Input id="homeDisplaySection" {...register('homeDisplaySection')} placeholder="Tag for home page section" />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      If this matches a product section heading on the home page, it will be added there automatically.
+                    </p>
                   </div>
 
                   <div>

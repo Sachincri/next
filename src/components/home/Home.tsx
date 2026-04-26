@@ -8,6 +8,8 @@ const HomeProducts = dynamic(() => import("./HomeProducts").then(mod => mod.Home
 const BannerSection = dynamic(() => import("./BannerSection"));
 const QuadGrid = dynamic(() => import("./QuadGrid"));
 const CarouselSlider = dynamic(() => import("./CustomCarousel"));
+const SingleProductCarousel = dynamic(() => import("./SingleProductCarousel"));
+const VideoReelsSection = dynamic(() => import("./VideoReelsSection"), { ssr: false });
 // CategorySection is above-the-fold but client-only (uses RTK Query), keep lazy to avoid bundle bloat
 const CategorySection = dynamic(() => import("./CategorySection"));
 const AISuggestions = dynamic(() => import("../product/AISuggestions"), { ssr: false });
@@ -15,10 +17,10 @@ const ProductSlider = dynamic(() => import("../product/ProductSlider").then(mod 
 
 import toast from "react-hot-toast";
 import { useGetHomePageDataQuery } from "@/redux/api/homeApi";
-import { Loader } from "../layout/Loader";
 import { useAppSelector } from "@/redux/hooks";
 import { useGetRecentlyViewedQuery } from "@/redux/api/productApi";
 import { RootState } from "@/redux/store";
+import { HomeSkeleton } from "./HomeSkeleton";
 
 interface HomeProps {
   initialData?: any;
@@ -48,9 +50,7 @@ export default function Home({ initialData }: HomeProps) {
   }, [error]);
 
   if (isLoading && !homeData) {
-    return (
-      <Loader fullScreen size="lg" text="Loading products..." />
-    );
+    return <HomeSkeleton />;
   }
 
   if (!homeData) {
@@ -78,8 +78,11 @@ export default function Home({ initialData }: HomeProps) {
     return {};
   };
 
-  const getSectionClass = (bgGradient?: string) => {
-    if (!bgGradient) return "bg-white dark:bg-slate-800/50";
+  const getSectionClass = (bgGradient?: string, type?: string) => {
+    if (!bgGradient) {
+      if (type === "quad_grid") return "bg-gray-100 dark:bg-slate-900/50";
+      return "bg-white dark:bg-slate-800/50";
+    }
     if (bgGradient.includes("linear-gradient") || bgGradient.includes("radial-gradient")) {
       return "";
     }
@@ -87,7 +90,7 @@ export default function Home({ initialData }: HomeProps) {
   };
 
   return (
-    <main className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
+    <main className="min-h-screen w-full  dark:bg-slate-950 overflow-x-hidden">
 
       <div className="md:mx-2 md:mt-2">
         <CategorySection />
@@ -113,7 +116,7 @@ export default function Home({ initialData }: HomeProps) {
           homeData.sections.map((section: any) => (
             <div
               key={section._id}
-              className={`transition-all duration-500 ${getSectionClass(section.bgGradient)}`}
+              className={`transition-all duration-500 ${getSectionClass(section.bgGradient, section.type)}`}
               style={getSectionStyle(section.bgGradient)}
             >
               <div className=" py-2">
@@ -142,18 +145,52 @@ export default function Home({ initialData }: HomeProps) {
                   }} />
                 )}
 
-                {/*  Quad Grid Section */}
-                {section.type === "quad_grid" && section.quads && (
-                  <QuadGrid quads={section.quads.map((q: any) => ({
-                    title: q.title,
-                    redirectLink: q.redirectLink || "#",
-                    redirectText: q.redirectText || "See more",
-                    items: (q.items || []).map((it: any) => ({
+                {/* Single Product Carousel Section */}
+                {section.type === "single_product_carousel" && section.products && (
+                  <SingleProductCarousel products={{
+                    heading: section.products.heading,
+                    items: (section.products.items || []).map((it: any) => ({
                       image: it.image?.url || it.image,
                       title: it.title,
+                      subtitle: it.subtitle,
                       redirectLink: it.redirectLink || "#"
                     }))
-                  }))} />
+                  }} />
+                )}
+
+                {/*  Quad Grid Section */}
+                {section.type === "quad_grid" && section.quads && (
+                  <QuadGrid
+                    mobileColumns={section.mobileColumns}
+                    quads={section.quads.map((q: any) => ({
+                      title: q.title,
+                      layout: q.layout || "grid",
+                      redirectLink: q.redirectLink || "#",
+                      redirectText: q.redirectText || "See more",
+                      items: (q.items || []).map((it: any) => ({
+                        image: it.image?.url || it.image,
+                        title: it.title,
+                        redirectLink: it.redirectLink || "#"
+                      }))
+                    }))} />
+                )}
+
+                {/* Video Reels Section */}
+                {section.type === "video_reels" && section.videoReels && section.videoReels.length > 0 && (
+                  <VideoReelsSection
+                    heading={section.products?.heading || "Trending Reels"}
+                    reels={section.videoReels.map((r: any) => ({
+                      video: r.video?.url || r.video,
+                      thumbnail: r.thumbnail?.url || r.thumbnail,
+                      title: r.title,
+                      subtitle: r.subtitle,
+                      redirectLink: r.redirectLink || "",
+                      productId: r.productId || "",
+                      oembedUrl: r.oembedUrl || "",
+                      oembedHtml: r.oembedHtml || "",
+                      isOEmbed: r.isOEmbed || false,
+                    }))}
+                  />
                 )}
               </div>
             </div>
@@ -179,6 +216,3 @@ export default function Home({ initialData }: HomeProps) {
     </main>
   );
 }
-
-// frontend/src/components/AdminAddCategory.tsx
-

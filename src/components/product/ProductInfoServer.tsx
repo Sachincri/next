@@ -38,26 +38,33 @@ export const ProductInfoServer: React.FC<ProductInfoServerProps> = ({
 
             {/* Price Block */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                <div className="flex items-baseline gap-3 mb-1">
-                    <span className="text-4xl font-black text-gray-900 dark:text-slate-100">₹{product?.sellingPrice?.toLocaleString()}</span>
+                <div className="flex items-baseline gap-3 mb-1 flex-wrap">
+                    <span className="text-4xl md:text-5xl font-black text-gray-900 dark:text-slate-100 tracking-tight">₹{product?.sellingPrice?.toLocaleString()}</span>
                     {product?.maximumRetailPrice && (
-                        <span className="text-xl text-gray-400 dark:text-slate-500 line-through font-medium">₹{product.maximumRetailPrice?.toLocaleString()}</span>
+                        <span className="text-xl md:text-2xl text-gray-400 dark:text-slate-500 line-through font-medium">₹{product.maximumRetailPrice?.toLocaleString()}</span>
                     )}
                     {product.discount > 0 && (
-                        <span className="text-green-600 dark:text-green-400 font-bold px-2 py-0.5 bg-green-50 dark:bg-green-900/20 rounded-md text-sm">
+                        <span className="text-white font-bold px-3 py-1 bg-green-600 rounded-lg text-sm md:text-base tracking-wide shadow-sm ml-2">
                             {product.discount}% OFF
                         </span>
                     )}
                 </div>
-                <p className="text-gray-500 dark:text-slate-400 text-xs font-medium">Inclusive of all taxes</p>
+                <p className="text-gray-500 dark:text-slate-400 text-xs font-medium mt-2">Inclusive of all taxes</p>
 
-                <div className="flex gap-4 mt-6 pt-6 border-t border-gray-100 dark:border-slate-800">
+                {/* Inventory Status */}
+                {(product?.stock !== undefined && product?.stock <= 5 && product?.stock > 0) && (
+                    <div className="mt-3 text-red-600 text-sm font-semibold flex items-center gap-1 animate-pulse">
+                       Only {product.stock} left in stock!
+                    </div>
+                )}
+
+                <div className="flex flex-wrap gap-4 mt-6 pt-6 border-t border-gray-100 dark:border-slate-800">
                     {[
                         { icon: RotateCcw, text: "7 Day Return", color: "text-blue-600 dark:text-blue-400" },
                         { icon: Award, text: "Warranty", color: "text-orange-500 dark:text-orange-400" },
-                        { icon: Truck, text: "Free Delivery", color: "text-green-600 dark:text-green-400" }
+                        { icon: Truck, text: `Delivery by ${new Date(Date.now() + 5 * 86400000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`, color: "text-green-600 dark:text-green-400" }
                     ].map((item) => (
-                        <div key={item.text} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-slate-400">
+                        <div key={item.text} className="flex items-center gap-1.5 text-xs md:text-sm font-medium text-gray-600 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-slate-700">
                             <item.icon className={`w-4 h-4 ${item.color}`} />
                             <span>{item.text}</span>
                         </div>

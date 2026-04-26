@@ -54,6 +54,7 @@ export default function OrdersTable() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
+      ordered: { color: "bg-amber-100 text-amber-800", label: "Ordered" },
       placed: { color: "bg-blue-100 text-blue-800", label: "Placed" },
       new: { color: "bg-blue-100 text-blue-800", label: "New" },
       pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
@@ -63,6 +64,7 @@ export default function OrdersTable() {
       canceled: { color: "bg-red-100 text-red-800", label: "Canceled" },
       cancelled: { color: "bg-red-100 text-red-800", label: "Canceled" },
       refunded: { color: "bg-gray-100 text-gray-800", label: "Refunded" },
+      returned: { color: "bg-gray-100 text-gray-800", label: "Returned" },
     }
 
     const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || statusConfig.pending
@@ -267,21 +269,19 @@ export default function OrdersTable() {
                       </td>
                       <td className="py-3 px-4">
                         <Select
-                          defaultValue={order.orderStatus?.toLowerCase()}
+                          defaultValue={order.orderStatus}
                           onValueChange={(val) => handleUpdateStatus(order._id, val)}
                         >
                           <SelectTrigger className="w-28 h-8 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="placed">Placed</SelectItem>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="processing">Processing</SelectItem>
-                            <SelectItem value="shipped">Shipped</SelectItem>
-                            <SelectItem value="delivered">Delivered</SelectItem>
-                            <SelectItem value="canceled">Canceled</SelectItem>
-                            <SelectItem value="refunded">Refunded</SelectItem>
+                            <SelectItem value="Ordered">Ordered</SelectItem>
+                            <SelectItem value="Processing">Processing</SelectItem>
+                            <SelectItem value="Shipped">Shipped</SelectItem>
+                            <SelectItem value="Delivered">Delivered</SelectItem>
+                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                            <SelectItem value="Returned">Returned</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>

@@ -1,16 +1,76 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
 import { Button } from "@/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select"
 import { TrendingUp, BarChart3 } from "lucide-react"
 import { useGetAdminDashboardQuery } from "@/redux/api/adminApi"
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-card text-card-foreground border border-border shadow-md p-3 rounded-lg text-sm min-w-[220px]">
+        <p className="font-semibold mb-3 border-b border-border pb-2">{label}</p>
+        <div className="space-y-1.5">
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Gross Sales:</span>
+            <span className="font-medium">₹{data.grossSales?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Discounts:</span>
+            <span className="font-medium text-red-500">-₹{data.coinDiscount?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Shipping Fees:</span>
+            <span className="font-medium">₹{data.shippingFees?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Taxes:</span>
+            <span className="font-medium">₹{data.tax?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">COGS:</span>
+            <span className="font-medium">₹{data.cost?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Gateway Fees:</span>
+            <span className="font-medium">₹{data.gatewayFee?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Refunds:</span>
+            <span className="font-medium text-red-500">-₹{data.refunds?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="my-2 border-t border-border pt-1.5"></div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground font-semibold">Net Revenue:</span>
+            <span className="font-bold text-primary">₹{data.revenue?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground font-semibold">Net Profit:</span>
+            <span className="font-bold text-green-600">₹{data.profit?.toLocaleString('en-IN') || 0}</span>
+          </div>
+          <div className="my-2 border-t border-border pt-1.5"></div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Orders:</span>
+            <span className="font-medium">{data.orders || 0}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">AOV:</span>
+            <span className="font-medium">₹{data.aov?.toLocaleString('en-IN') || 0}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function RevenueChart() {
-  const [chartType, setChartType] = useState<"line" | "bar">("line")
-  const [selectedMetric, setSelectedMetric] = useState<"revenue" | "orders" | "aov">("revenue")
+  const [chartType, setChartType] = useState<"area" | "bar">("area")
+  const [selectedMetric, setSelectedMetric] = useState<"revenue" | "orders" | "profit">("revenue")
   const [timeRange, setTimeRange] = useState("30d")
 
   const { data: dashboardData, isLoading } = useGetAdminDashboardQuery()
@@ -39,11 +99,7 @@ export default function RevenueChart() {
     return series.map((item: any) => {
       let dateLabel = item.date;
       if (timeRange === "1y" && item.month) {
-        dateLabel = item.month; // Already formatted as YYYY-MM
-        // Optional: Format to MMM YYYY if needed, but YYYY-MM is fine.
-        // Let's try to format it nicely if possible, or leave it. 
-        // format(new Date(item.month), "MMM yyyy") might break if item.month is not full date.
-        // But admin controller builds "yyyy-MM" string. new Date("2023-01") works.
+        dateLabel = item.month;
         try {
           dateLabel = new Date(item.month).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
         } catch (e) { }
@@ -55,25 +111,21 @@ export default function RevenueChart() {
 
       return {
         date: dateLabel,
-        revenue: item.revenue,
-        orders: item.orders,
-        aov: item.orders > 0 ? Number((item.revenue / item.orders).toFixed(2)) : 0
+        revenue: item.revenue || 0,
+        orders: item.orders || 0,
+        aov: item.orders > 0 ? Number((item.revenue / item.orders).toFixed(2)) : 0,
+        profit: Number(item.profit?.toFixed(2)) || 0,
+        grossSales: item.grossSales || 0,
+        coinDiscount: item.coinDiscount || 0,
+        shippingFees: item.shippingFees || 0,
+        tax: Number(item.tax?.toFixed(2)) || 0,
+        cost: Number(item.cost?.toFixed(2)) || 0,
+        gatewayFee: Number(item.gatewayFee?.toFixed(2)) || 0,
+        refunds: item.refunds || 0,
+        refundCount: item.refundCount || 0,
       };
     });
   }, [dashboardData, timeRange]);
-
-  const getMetricLabel = () => {
-    switch (selectedMetric) {
-      case "revenue":
-        return "Revenue"
-      case "orders":
-        return "Orders"
-      case "aov":
-        return "Average Order Value"
-      default:
-        return "Revenue"
-    }
-  }
 
   const getMetricColor = () => {
     switch (selectedMetric) {
@@ -81,7 +133,7 @@ export default function RevenueChart() {
         return "var(--color-primary)"
       case "orders":
         return "var(--color-chart-2)"
-      case "aov":
+      case "profit":
         return "var(--color-chart-3)"
       default:
         return "var(--color-primary)"
@@ -136,19 +188,19 @@ export default function RevenueChart() {
                 Orders
               </Button>
               <Button
-                variant={selectedMetric === "aov" ? "default" : "ghost"}
+                variant={selectedMetric === "profit" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setSelectedMetric("aov")}
+                onClick={() => setSelectedMetric("profit")}
               >
-                AOV
+                Profit
               </Button>
             </div>
 
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
               <Button
-                variant={chartType === "line" ? "default" : "ghost"}
+                variant={chartType === "area" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setChartType("line")}
+                onClick={() => setChartType("area")}
               >
                 <TrendingUp className="w-4 h-4" />
               </Button>
@@ -162,8 +214,14 @@ export default function RevenueChart() {
       <CardContent>
         <div className="h-96 min-w-0">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-            {chartType === "line" ? (
-              <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+            {chartType === "area" ? (
+              <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={getMetricColor()} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={getMetricColor()} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
                 <XAxis
                   dataKey="date"
@@ -179,24 +237,17 @@ export default function RevenueChart() {
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-md)",
-                    color: "var(--color-foreground)",
-                  }}
-                  labelStyle={{ color: "var(--color-foreground)" }}
-                />
-                <Line
+                <Tooltip content={<CustomTooltip />} />
+                <Area
                   type="monotone"
                   dataKey={selectedMetric}
                   stroke={getMetricColor()}
                   strokeWidth={3}
-                  dot={{ fill: getMetricColor(), strokeWidth: 2, r: 4 }}
+                  fillOpacity={1}
+                  fill="url(#colorMetric)"
                   activeDot={{ r: 6, fill: getMetricColor() }}
                 />
-              </LineChart>
+              </AreaChart>
             ) : (
               <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
@@ -214,14 +265,7 @@ export default function RevenueChart() {
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-md)",
-                    color: "var(--color-foreground)",
-                  }}
-                />
+                <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey={selectedMetric} fill={getMetricColor()} radius={[4, 4, 0, 0]} />
               </BarChart>
             )}
@@ -231,4 +275,3 @@ export default function RevenueChart() {
     </Card>
   )
 }
-

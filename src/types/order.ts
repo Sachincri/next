@@ -21,7 +21,17 @@ export interface Order {
         code: string;
         discount: number;
     };
-    orderStatus: "Processing" | "Shipped" | "Delivered" | "Cancelled";
+    shipment?: {
+        provider: string;
+        providerOrderId?: string;
+        shipmentId?: string;
+        awbNumber?: string;
+        courierName?: string;
+        trackingUrl?: string;
+        estimatedDelivery?: string;
+    };
+
+    orderStatus: "Ordered" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Returned";
     deliveredAt?: string;
     processingAt?: string;
     shippedAt?: string;
@@ -55,7 +65,7 @@ export interface ProfileOrder {
     id: string;
     _id?: string;
     title: string;
-    status: 'Delivered' | 'Out for Delivery' | 'Processing' | 'Cancelled';
+    status: 'Ordered' | 'Delivered' | 'Out for Delivery' | 'Processing' | 'Cancelled' | 'Returned';
     price: number;
     image: string;
     deliveredDate?: string;

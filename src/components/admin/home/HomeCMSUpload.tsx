@@ -2,7 +2,7 @@
 "use client";
 
 import React, { FC, useState, useCallback, useEffect } from "react";
-import { Settings, Eye, X, Save, Loader2, AlertCircle } from "lucide-react";
+import { Settings, Eye, X, Save, Loader2, AlertCircle, LayoutTemplate } from "lucide-react";
 import {
     useCreateBrandMutation,
     useCreateCategoryMutation,
@@ -10,10 +10,14 @@ import {
 } from "@/redux/api/adminApi";
 import {
     useGetHomePageDataQuery,
+    useGetHomePageByIdQuery,
+    useGetAllHomePagesQuery,
     useUpdateHomePageDataMutation,
+    useUpdateDraftPageMutation,
     useUpdateSeoMutation,
     useUpdateCarouselMutation,
     useUpdateSectionMutation,
+    useResolveOEmbedMutation,
 } from "@/redux/api/homeApi";
 import toast from "react-hot-toast";
 import { z } from "zod";
@@ -22,16 +26,19 @@ import {
     CarouselItem,
     Banner,
     ProductsSection,
+    SingleProductSection,
     SectionType,
+    VideoReel,
 } from "@/types/home";
 
 // Internal Components
-import { SaveIndicator, ErrorBadge } from "./components/CMSComponents";
+import { CollapsibleSection, ImageUploadField, SaveIndicator, ErrorBadge } from "./components/CMSComponents";
 import { SEOSettings } from "./components/SEOSettings";
 import { CarouselSettings } from "./components/CarouselSettings";
 import { HeaderSettings } from "./components/HeaderSettings";
 import { SectionSettings } from "./components/SectionSettings";
 import { BrandCategorySettings } from "./components/BrandCategorySettings";
+import { HomePageSelector } from "./components/HomePageSelector";
 import { useUpdateHeaderLogoMutation } from "@/redux/api/homeApi";
 
 // ============================================================================
@@ -84,12 +91,33 @@ const HomeCMSIntegrated: FC = () => {
     const [createCategory, { isLoading: categoryLoading }] = useCreateCategoryMutation();
     const [updateHomePage, { isLoading: updateLoading }] = useUpdateHomePageDataMutation(); // Keep for global save/creation handling if needed
 
+    // Global State
+    const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+
     // Modular Mutations
+    const [updateDraftPage] = useUpdateDraftPageMutation();
     const [updateSEO, { isLoading: seoLoading }] = useUpdateSeoMutation();
     const [updateCarousel, { isLoading: carouselLoading }] = useUpdateCarouselMutation();
     const [updateSection, { isLoading: sectionLoading }] = useUpdateSectionMutation(); // We'll assume the hook handles the sectionId logic
 
-    const { data: homeData, isLoading: dataLoading } = useGetHomePageDataQuery();
+    // Fetch lists and data
+    const { data: pagesListResponse } = useGetAllHomePagesQuery();
+
+    useEffect(() => {
+        if (pagesListResponse?.data) {
+            const pages = pagesListResponse.data;
+
+            // If nothing selected, or if current selection is not in the list (stale), pick a default
+            const isCurrentValid = selectedPageId && pages.some((p: any) => p._id === selectedPageId);
+
+            if (!isCurrentValid && pages.length > 0) {
+                const activePage = pages.find((p: any) => p.isActive);
+                setSelectedPageId(activePage?._id || pages[0]._id);
+            }
+        }
+    }, [pagesListResponse, selectedPageId]);
+
+    const { data: homeData, isLoading: dataLoading, refetch: refetchHomeData } = useGetHomePageByIdQuery(selectedPageId as string, { skip: !selectedPageId });
 
     // State
     const [seo, setSeo] = useState<IHomePageCMS["seo"]>({
@@ -105,6 +133,7 @@ const HomeCMSIntegrated: FC = () => {
 
     const [sections, setSections] = useState<IHomePageCMS["sections"]>([]);
     const [headerLogo, setHeaderLogo] = useState<IHomePageCMS["headerLogo"]>("");
+    const [storeName, setStoreName] = useState<string>("");
     const [preview, setPreview] = useState(false);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -139,6 +168,7 @@ const HomeCMSIntegrated: FC = () => {
             });
 
             setHeaderLogo(homeData.headerLogo);
+            setStoreName(homeData.storeName || "");
 
             setCarousel({
                 ...homeData.carousel,
@@ -149,7 +179,7 @@ const HomeCMSIntegrated: FC = () => {
             });
 
             setSections((homeData.sections || []).map(section => {
-                if (section.type === "products") {
+                if (section.type === "products" || section.type === "single_product_carousel") {
                     return {
                         ...section,
                         id: section.id || (section as any)._id,
@@ -173,7 +203,7 @@ const HomeCMSIntegrated: FC = () => {
                             }))
                         }))
                     } as any;
-                } else {
+                } else if (section.type === "banner1" || section.type === "banner2" || section.type === "banner3") {
                     return {
                         ...section,
                         id: section.id || (section as any)._id, // Ensure we have id
@@ -181,6 +211,21 @@ const HomeCMSIntegrated: FC = () => {
                             ...banner,
                             image: banner.image // Preserve object
                         }))
+                    } as any;
+                } else if (section.type === "video_reels") {
+                    return {
+                        ...section,
+                        id: section.id || (section as any)._id,
+                        videoReels: ((section as any).videoReels || []).map((reel: any) => ({
+                            ...reel,
+                            video: reel.video,
+                            thumbnail: reel.thumbnail,
+                        }))
+                    } as any;
+                } else {
+                    return {
+                        ...section,
+                        id: section.id || (section as any)._id
                     } as any;
                 }
             }));
@@ -205,28 +250,27 @@ const HomeCMSIntegrated: FC = () => {
 
             if (sections.length > 0) {
                 sections.forEach((section, idx) => {
-                    if (section.type === "products") {
+                    if (section.type === "products" || section.type === "single_product_carousel") {
                         if (!section.products.heading || section.products.heading.trim() === "") {
-                            throw new Error(`Section ${idx + 1}: Products section heading is required`);
+                            throw new Error(`Section ${idx + 1}: Section heading is required`);
                         }
                         if (section.products.items.length === 0) {
-                            throw new Error(`Section ${idx + 1}: At least one product is required`);
+                            throw new Error(`Section ${idx + 1}: At least one product/image is required`);
                         }
                         section.products.items.forEach((item, pIdx) => {
-                            if (!item.image) throw new Error(`Section ${idx + 1}, Product ${pIdx + 1}: Image is required`);
-                            if (!item.title) throw new Error(`Section ${idx + 1}, Product ${pIdx + 1}: Title is required`);
+                            if (!item.image) throw new Error(`Section ${idx + 1}, Item ${pIdx + 1}: Image is required`);
+                            if (!item.title) throw new Error(`Section ${idx + 1}, Item ${pIdx + 1}: Title is required`);
                         });
                     } else if (section.type === "quad_grid") {
-                        // Quad Grid Validation (if needed)
-                        // For example:
-                        if (section.quads?.some(q => !q.title)) {
-                            // Assuming title is required for quads, adjust as per requirements
-                            // throw new Error(`Section ${idx + 1}: All quads must have a title`);
-                        }
-                    } else {
+                        // Quad Grid Validation
+                    } else if (section.type === "banner1" || section.type === "banner2" || section.type === "banner3") {
                         section.banners.forEach((banner, bIdx) => {
                             if (!banner.image) throw new Error(`Section ${idx + 1}, Banner ${bIdx + 1}: Image is required`);
                             if (!banner.title) throw new Error(`Section ${idx + 1}, Banner ${bIdx + 1}: Title is required`);
+                        });
+                    } else if (section.type === "video_reels") {
+                        (section as any).videoReels?.forEach((reel: any, rIdx: number) => {
+                            if (!reel.video) throw new Error(`Section ${idx + 1}, Reel ${rIdx + 1}: Video file is required`);
                         });
                     }
                 });
@@ -325,6 +369,7 @@ const HomeCMSIntegrated: FC = () => {
             const file = pendingFiles[logoUrl];
             if (file) formData.append("headerLogo", file);
         }
+        formData.append("storeName", storeName);
 
         try {
             const res = await updateHeaderLogo({ id: homeData._id, body: formData }).unwrap();
@@ -395,7 +440,7 @@ const HomeCMSIntegrated: FC = () => {
         formData.append("payload", JSON.stringify(cleanSection));
 
         // Append files
-        if (section.type === 'products') {
+        if (section.type === 'products' || section.type === 'single_product_carousel') {
             section.products.items.forEach((item, pIdx) => {
                 const img = typeof item.image === 'object' ? (item.image as any).url : item.image;
                 if (img?.startsWith("blob:")) {
@@ -413,14 +458,30 @@ const HomeCMSIntegrated: FC = () => {
                     }
                 });
             });
-        } else {
-            section.banners.forEach((banner, bIdx) => {
-                const img = typeof banner.image === 'object' ? (banner.image as any).url : banner.image;
-                if (img?.startsWith("blob:")) {
-                    const file = pendingFiles[img];
-                    if (file) formData.append(`banners.${bIdx}.image`, file);
+        } else if (section.type === 'video_reels') {
+            ((section as any).videoReels || []).forEach((reel: any, rIdx: number) => {
+                const vidUrl = typeof reel.video === 'object' ? reel.video?.url : reel.video;
+                if (vidUrl?.startsWith("blob:")) {
+                    const file = pendingFiles[vidUrl];
+                    if (file) formData.append(`videoReels.${rIdx}.video`, file);
+                }
+                const thumbUrl = typeof reel.thumbnail === 'object' ? reel.thumbnail?.url : reel.thumbnail;
+                if (thumbUrl?.startsWith("blob:")) {
+                    const file = pendingFiles[thumbUrl];
+                    if (file) formData.append(`videoReels.${rIdx}.thumbnail`, file);
                 }
             });
+        } else {
+            const hasBanners = (section as any).banners;
+            if (hasBanners) {
+                (section as any).banners.forEach((banner: any, bIdx: number) => {
+                    const img = typeof banner.image === 'object' ? (banner.image as any).url : banner.image;
+                    if (img?.startsWith("blob:")) {
+                        const file = pendingFiles[img];
+                        if (file) formData.append(`banners.${bIdx}.image`, file);
+                    }
+                });
+            }
         }
 
         try {
@@ -476,7 +537,11 @@ const HomeCMSIntegrated: FC = () => {
     };
 
     const handleSubmit = async () => {
-        // ... (Keep existing global save as fallback/initial creation) ...
+        if (!selectedPageId) {
+            toast.error("No page selected to save. Please select or create a draft first.");
+            return;
+        }
+
         if (!validateData()) {
             setSaveStatus("error");
             return;
@@ -509,7 +574,7 @@ const HomeCMSIntegrated: FC = () => {
             });
 
             sections.forEach((section, sIdx) => {
-                if (section.type === "products") {
+                if (section.type === "products" || section.type === "single_product_carousel") {
                     section.products.items.forEach((item, pIdx) => {
                         const img = typeof item.image === 'object' ? (item.image as any).url : item.image;
                         if (img?.startsWith("blob:")) {
@@ -527,7 +592,7 @@ const HomeCMSIntegrated: FC = () => {
                             }
                         });
                     });
-                } else if ((section as any).banners) {
+                } else if (section.type.startsWith("banner")) {
                     (section as any).banners.forEach((banner: any, bIdx: number) => {
                         const img = typeof banner.image === 'object' ? (banner.image as any).url : banner.image;
                         if (img?.startsWith("blob:")) {
@@ -535,16 +600,35 @@ const HomeCMSIntegrated: FC = () => {
                             if (file) formData.append(`sections.${sIdx}.banners.${bIdx}.image`, file);
                         }
                     });
+                } else if (section.type === "video_reels" && (section as any).videoReels) {
+                    ((section as any).videoReels || []).forEach((reel: any, rIdx: number) => {
+                        const vidUrl = typeof reel.video === 'object' ? reel.video?.url : reel.video;
+                        if (vidUrl?.startsWith("blob:")) {
+                            const file = pendingFiles[vidUrl];
+                            if (file) formData.append(`sections.${sIdx}.videoReels.${rIdx}.video`, file);
+                        }
+                        const thumbUrl = typeof reel.thumbnail === 'object' ? reel.thumbnail?.url : reel.thumbnail;
+                        if (thumbUrl?.startsWith("blob:")) {
+                            const file = pendingFiles[thumbUrl];
+                            if (file) formData.append(`sections.${sIdx}.videoReels.${rIdx}.thumbnail`, file);
+                        }
+                    });
                 }
             });
 
-            const res = await updateHomePage(formData).unwrap();
+            const res = await updateDraftPage({ id: selectedPageId as string, body: formData }).unwrap();
             setSaveStatus("saved");
             toast.success(res?.message || "Home page saved successfully");
             setPendingFiles({});
         } catch (error: any) {
             setSaveStatus("error");
-            toast.error(error?.data?.message || "Failed to save home page");
+            const serverErrors = error?.data?.errors;
+            if (serverErrors && Array.isArray(serverErrors) && serverErrors.length > 0) {
+                serverErrors.forEach((e: any) => toast.error(e.message || e));
+            } else {
+                toast.error(error?.data?.message || "Failed to save home page");
+            }
+            console.error("Save Error:", error?.data || error);
         }
     };
 
@@ -567,13 +651,22 @@ const HomeCMSIntegrated: FC = () => {
         setCarousel(prev => ({ items: prev.items.filter((_, i) => i !== index) }));
     };
 
-    const addSection = (type: "products" | "banner" | "quad_grid", count?: number) => {
+    const addSection = (type: "products" | "banner" | "quad_grid" | "single_product" | "video_reels", count?: number) => {
         const newOrder = sections.length > 0 ? Math.max(...sections.map(s => s.order)) + 1 : 2;
         if (type === "products") {
             const newSection: ProductsSection = {
                 id: Date.now(),
                 order: newOrder,
                 type: "products",
+                products: { heading: "", items: [{ image: "", title: "", subtitle: "", redirectLink: "" }] },
+            };
+            setSections(prev => [...prev, newSection]);
+            setOpenSectionId(newSection.id);
+        } else if (type === "single_product") {
+            const newSection: SingleProductSection = {
+                id: Date.now(),
+                order: newOrder,
+                type: "single_product_carousel",
                 products: { heading: "", items: [{ image: "", title: "", subtitle: "", redirectLink: "" }] },
             };
             setSections(prev => [...prev, newSection]);
@@ -594,16 +687,52 @@ const HomeCMSIntegrated: FC = () => {
                 id: Date.now(),
                 order: newOrder,
                 type: "quad_grid",
-                quads: Array.from({ length: 3 }, () => ({
-                    title: "",
-                    redirectLink: "",
-                    redirectText: "Shop all",
-                    items: Array.from({ length: 4 }, () => ({ image: "", title: "", redirectLink: "" }))
-                })),
+                quads: [],
+            };
+            setSections(prev => [...prev, newSection as any]);
+            setOpenSectionId(newSection.id);
+        } else if (type === "video_reels") {
+            const newSection = {
+                id: Date.now(),
+                order: newOrder,
+                type: "video_reels",
+                videoReels: [],
             };
             setSections(prev => [...prev, newSection as any]);
             setOpenSectionId(newSection.id);
         }
+    };
+
+    const addQuadColumn = (sectionId: number) => {
+        setSections(prev => {
+            return prev.map(s => {
+                if (s.id === sectionId && s.type === "quad_grid") {
+                    const newQuad = {
+                        title: "",
+                        redirectLink: "",
+                        redirectText: "Shop all",
+                        items: [{ image: "", title: "", redirectLink: "" }],
+                        layout: "single" as any
+                    };
+                    return { ...s, quads: [...(s.quads || []), newQuad] };
+                }
+                return s;
+            });
+        });
+        toast.success("Column added to grid");
+    };
+
+    const removeQuadColumn = (sectionId: number, quadIndex: number) => {
+        setSections(prev => {
+            return prev.map(s => {
+                if (s.id === sectionId && s.type === "quad_grid") {
+                    const newQuads = [...(s.quads || [])].filter((_, i) => i !== quadIndex);
+                    return { ...s, quads: newQuads };
+                }
+                return s;
+            });
+        });
+        toast.success("Column removed from grid");
     };
 
     const removeSection = (id: number) => {
@@ -669,7 +798,21 @@ const HomeCMSIntegrated: FC = () => {
         setSections(prev => prev.map(s => {
             if (s.id === sectionId && s.type === "quad_grid") {
                 const newQuads = [...(s as any).quads];
-                newQuads[quadIndex] = { ...newQuads[quadIndex], [field]: value };
+                let currentQuad = { ...newQuads[quadIndex], [field]: value };
+
+                // Ensure correct number of items if layout changes
+                if (field === "layout") {
+                    if (value === "grid" && currentQuad.items.length < 4) {
+                        const needed = 4 - currentQuad.items.length;
+                        currentQuad.items = [...currentQuad.items, ...Array.from({ length: needed }, () => ({ image: "", title: "", redirectLink: "" }))];
+                    } else if (value === "single" && currentQuad.items.length === 0) {
+                        currentQuad.items = [{ image: "", title: "", redirectLink: "" }];
+                    } else if (value === "carousel" && currentQuad.items.length < 1) {
+                        currentQuad.items = [{ image: "", title: "", redirectLink: "" }];
+                    }
+                }
+
+                newQuads[quadIndex] = currentQuad;
                 return { ...s, quads: newQuads };
             }
             return s;
@@ -690,8 +833,70 @@ const HomeCMSIntegrated: FC = () => {
         }));
     };
 
-    const updateSectionProperty = (sectionId: number, field: string, value: string) => {
+    const updateSectionProperty = (sectionId: number, field: string, value: any) => {
         setSections(prev => prev.map(s => (s.id === sectionId ? { ...s, [field]: value } : s)));
+    };
+
+    const addReelToSection = (sectionId: number) => {
+        setSections(prev => prev.map(s => {
+            if (s.id === sectionId && s.type === "video_reels") {
+                return { ...s, videoReels: [...(s.videoReels || []), { video: "", thumbnail: "", title: "", subtitle: "", redirectLink: "" }] };
+            }
+            return s;
+        }));
+    };
+
+    const removeReelFromSection = (sectionId: number, reelIndex: number) => {
+        setSections(prev => prev.map(s => {
+            if (s.id === sectionId && s.type === "video_reels") {
+                const reels = s.videoReels || [];
+                return { ...s, videoReels: reels.filter((_, idx) => idx !== reelIndex) };
+            }
+            return s;
+        }));
+    };
+
+    const updateReelInSection = (sectionId: number, reelIndex: number, field: string, value: string, file?: File) => {
+        if ((field === "video" || field === "thumbnail") && file) {
+            setPendingFiles(prev => ({ ...prev, [value]: file }));
+        }
+        setSections(prev => prev.map(s => {
+            if (s.id === sectionId && s.type === "video_reels") {
+                const newReels = [...(s.videoReels || [])];
+                newReels[reelIndex] = { ...newReels[reelIndex], [field]: value };
+                return { ...s, videoReels: newReels };
+            }
+            return s;
+        }));
+    };
+
+    const [resolveOEmbed] = useResolveOEmbedMutation();
+
+    const resolveReelUrl = async (sectionId: number, reelIndex: number, url: string) => {
+        if (!url) return;
+
+        const tid = toast.loading("Resolving video URL...");
+        try {
+            const data = await resolveOEmbed(url).unwrap();
+            setSections(prev => prev.map(s => {
+                if (s.id === sectionId && s.type === "video_reels") {
+                    const newReels = [...(s.videoReels || [])];
+                    newReels[reelIndex] = {
+                        ...newReels[reelIndex],
+                        oembedUrl: url,
+                        oembedHtml: data.html,
+                        title: newReels[reelIndex].title || data.title,
+                        thumbnail: newReels[reelIndex].thumbnail || (data.thumbnail_url ? { url: data.thumbnail_url, public_id: "oembed" } : ""),
+                        isOEmbed: true
+                    };
+                    return { ...s, videoReels: newReels };
+                }
+                return s;
+            }));
+            toast.success("Resolved successfully!", { id: tid });
+        } catch (error: any) {
+            toast.error(error.data?.message || "Failed to resolve URL", { id: tid });
+        }
     };
 
     if (dataLoading) {
@@ -754,42 +959,78 @@ const HomeCMSIntegrated: FC = () => {
 
                 {!preview ? (
                     <div className="space-y-6 animate-in slide-in-from-bottom-4 fade-in duration-500">
-                        <SEOSettings
-                            seo={seo} setSeo={setSeo} validationErrors={validationErrors}
-                            isOpen={expandedSections.seo} onToggle={() => setExpandedSections(p => ({ ...p, seo: !p.seo }))}
-                            onSave={handleSaveSEO}
-                            onFileChange={(file, url) => setPendingFiles(prev => ({ ...prev, [url]: file }))}
+                        <HomePageSelector
+                            selectedPageId={selectedPageId}
+                            onSelectPage={setSelectedPageId}
                         />
-                        <HeaderSettings
-                            headerLogo={headerLogo}
-                            setHeaderLogo={(val) => setHeaderLogo(val as any)}
-                            onSave={handleSaveHeader}
-                            isLoading={headerLoading}
-                            isOpen={expandedSections.logo}
-                            onToggle={() => setExpandedSections(p => ({ ...p, logo: !p.logo }))}
-                            onFileChange={(file, url) => setPendingFiles(prev => ({ ...prev, [url]: file }))}
-                        />
-                        <CarouselSettings
-                            carousel={carousel} addCarouselItem={addCarouselItem} updateCarouselItem={updateCarouselItem} removeCarouselItem={removeCarouselItem}
-                            validationErrors={validationErrors} isOpen={expandedSections.carousel} onToggle={() => setExpandedSections(p => ({ ...p, carousel: !p.carousel }))}
-                            onSave={handleSaveCarousel}
-                        />
-                        <SectionSettings
-                            sections={sections} addSection={addSection} removeSection={removeSection} moveSection={moveSection} updateBannerInSection={updateBannerInSection}
-                            addProductToSection={addProductToSection} updateProductInSection={updateProductInSection} removeProductFromSection={removeProductFromSection}
-                            updateProductsInSection={updateProductsInSection} validationErrors={validationErrors} openSectionId={openSectionId} setOpenSectionId={setOpenSectionId}
-                            onSaveSection={handleSaveSection}
-                            updateQuadInSection={updateQuadInSection}
-                            updateQuadItemInSection={updateQuadItemInSection}
-                            updateSectionProperty={updateSectionProperty}
-                        />
-                        <BrandCategorySettings
-                            brandName={brandName} setBrandName={setBrandName} brandPreview={brandPreview} brandLoading={brandLoading} handleCreateBrand={handleCreateBrand} setBrandFile={setBrandFile} setBrandPreview={setBrandPreview}
-                            categoryName={categoryName} setCategoryName={setCategoryName} categoryPreview={categoryPreview} categoryLoading={categoryLoading} handleCreateCategory={handleCreateCategory} setCategoryFile={setCategoryFile} setCategoryPreview={setCategoryPreview}
-                            categoryParent={categoryParent} setCategoryParent={setCategoryParent}
-                            categories={categoriesList as any[]}
-                            isOpen={expandedSections.brands} onToggle={() => setExpandedSections(p => ({ ...p, brands: !p.brands }))}
-                        />
+
+                        {selectedPageId ? (
+                            <>
+                                <SEOSettings
+                                    seo={seo} setSeo={setSeo} validationErrors={validationErrors}
+                                    isOpen={expandedSections.seo} onToggle={() => setExpandedSections(p => ({ ...p, seo: !p.seo }))}
+                                    onSave={handleSaveSEO}
+                                    onFileChange={(file, url) => setPendingFiles(prev => ({ ...prev, [url]: file }))}
+                                />
+                                <HeaderSettings
+                                    headerLogo={headerLogo}
+                                    setHeaderLogo={(val) => setHeaderLogo(val as any)}
+                                    storeName={storeName}
+                                    setStoreName={setStoreName}
+                                    onSave={handleSaveHeader}
+                                    isLoading={headerLoading}
+                                    isOpen={expandedSections.logo}
+                                    onToggle={() => setExpandedSections(p => ({ ...p, logo: !p.logo }))}
+                                    onFileChange={(file, url) => setPendingFiles(prev => ({ ...prev, [url]: file }))}
+                                />
+                                <CarouselSettings
+                                    carousel={carousel} addCarouselItem={addCarouselItem} updateCarouselItem={updateCarouselItem} removeCarouselItem={removeCarouselItem}
+                                    validationErrors={validationErrors} isOpen={expandedSections.carousel} onToggle={() => setExpandedSections(p => ({ ...p, carousel: !p.carousel }))}
+                                    onSave={handleSaveCarousel}
+                                />
+                                <SectionSettings
+                                    sections={sections}
+                                    addSection={addSection}
+                                    removeSection={removeSection}
+                                    moveSection={moveSection}
+                                    updateBannerInSection={updateBannerInSection}
+                                    addProductToSection={addProductToSection}
+                                    updateProductInSection={updateProductInSection}
+                                    removeProductFromSection={removeProductFromSection}
+                                    updateProductsInSection={updateProductsInSection}
+                                    validationErrors={validationErrors}
+                                    openSectionId={openSectionId}
+                                    setOpenSectionId={setOpenSectionId}
+                                    updateQuadInSection={updateQuadInSection}
+                                    updateQuadItemInSection={updateQuadItemInSection}
+                                    onSaveSection={handleSaveSection}
+                                    updateSectionProperty={updateSectionProperty}
+                                    addQuadColumn={addQuadColumn}
+                                    removeQuadColumn={removeQuadColumn}
+                                    addReelToSection={addReelToSection}
+                                    removeReelFromSection={removeReelFromSection}
+                                    updateReelInSection={updateReelInSection}
+                                    resolveReelUrl={resolveReelUrl}
+                                />
+                                <BrandCategorySettings
+                                    brandName={brandName} setBrandName={setBrandName} brandPreview={brandPreview} brandLoading={brandLoading} handleCreateBrand={handleCreateBrand} setBrandFile={setBrandFile} setBrandPreview={setBrandPreview}
+                                    categoryName={categoryName} setCategoryName={setCategoryName} categoryPreview={categoryPreview} categoryLoading={categoryLoading} handleCreateCategory={handleCreateCategory} setCategoryFile={setCategoryFile} setCategoryPreview={setCategoryPreview}
+                                    categoryParent={categoryParent} setCategoryParent={setCategoryParent}
+                                    categories={categoriesList as any[]}
+                                    isOpen={expandedSections.brands} onToggle={() => setExpandedSections(p => ({ ...p, brands: !p.brands }))}
+                                />
+                            </>
+                        ) : (
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-12 text-center animate-in fade-in zoom-in-95 duration-500">
+                                <div className="w-20 h-20 bg-orange-50 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <LayoutTemplate className="w-10 h-10 text-orange-500" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No Page Selected</h3>
+                                <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-8">
+                                    Please select an existing home page version from the selector above, or create a new draft to start editing.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden p-8 animate-in zoom-in-95 duration-300">

@@ -16,8 +16,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     useEffect(() => {
         // Initialize socket connection
-        // Derive socket URL from the API server URL (remove /api/v1)
-        const socketUrl = process.env.NEXT_PUBLIC_API_URL || server.replace('/api/v1', '');
+        // Derive socket URL from the environment or default to backend origin
+        const envServerUrl = process.env.NEXT_PUBLIC_SERVER_URL;
+        const defaultBackend = envServerUrl ? envServerUrl.replace(/\/api\/v1\/?$/, '') : 'http://localhost:5000';
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || defaultBackend;
 
         const socketInstance = io(socketUrl, {
             transports: ['polling', 'websocket'],

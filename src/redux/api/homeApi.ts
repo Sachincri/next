@@ -3,10 +3,53 @@ import { IHomePageCMS } from "@/types/home";
 
 export const homeApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
+        // Legacy Active Page endpoints
         getHomePageData: builder.query<IHomePageCMS, void>({
             query: () => "/home",
             providesTags: ["Home"],
             transformResponse: (response: any) => response.setHomePageData || response.data,
+        }),
+        
+        // New Home Pages Manager endpoints
+        getAllHomePages: builder.query<any, void>({
+            query: () => "/home/cms/pages",
+            providesTags: ["Home"],
+            transformResponse: (response: any) => response.data,
+        }),
+        getHomePageById: builder.query<IHomePageCMS, string>({
+            query: (id) => `/home/cms/pages/${id}`,
+            providesTags: ["Home"],
+            transformResponse: (response: any) => response.data,
+        }),
+        createDraftPage: builder.mutation<any, FormData>({
+            query: (formData) => ({
+                url: "/home/cms/pages",
+                method: "POST",
+                body: formData,
+            }),
+            invalidatesTags: ["Home"],
+        }),
+        updateDraftPage: builder.mutation<any, {id: string, body: FormData}>({
+            query: ({id, body}) => ({
+                url: `/home/cms/pages/${id}`,
+                method: "PUT",
+                body,
+            }),
+            invalidatesTags: ["Home"],
+        }),
+        updatePageStatus: builder.mutation<any, string>({
+            query: (id) => ({
+                url: `/home/cms/pages/${id}/status`,
+                method: "PATCH",
+            }),
+            invalidatesTags: ["Home"], 
+        }),
+        deleteDraftPage: builder.mutation<any, string>({
+            query: (id) => ({
+                url: `/home/cms/pages/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Home"],
         }),
         updateHomePageData: builder.mutation<any, FormData>({
             query: (formData) => ({
@@ -102,10 +145,19 @@ export const homeApi = apiSlice.injectEndpoints({
             providesTags: ["Home"],
             transformResponse: (response: any) => response.data.settings,
         }),
+        resolveOEmbed: builder.mutation<{title: string, thumbnail_url: string, html: string, provider_name: string}, string>({
+            query: (url) => ({
+                url: "/home/cms/resolve-oembed",
+                method: "POST",
+                body: { url },
+            }),
+            transformResponse: (response: any) => response.data,
+        }),
     }),
 });
 
 export const {
+    // API Hooks
     useGetHomePageDataQuery,
     useUpdateHomePageDataMutation,
     useUpdateSeoMutation,
@@ -119,4 +171,13 @@ export const {
     useToggleBannerStatusMutation,
     useGetPublicSettingsQuery,
     useUpdateHeaderLogoMutation,
+    useResolveOEmbedMutation,
+    
+    // New Home Pages Manager Hooks
+    useGetAllHomePagesQuery,
+    useGetHomePageByIdQuery,
+    useCreateDraftPageMutation,
+    useUpdateDraftPageMutation,
+    useUpdatePageStatusMutation,
+    useDeleteDraftPageMutation,
 } = homeApi;

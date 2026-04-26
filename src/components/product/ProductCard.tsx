@@ -89,11 +89,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <h3 className="text-sm sm:text-lg font-normal text-gray-800 dark:text-slate-200 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{name}</h3>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 sm:px-2 py-0.5 rounded-sm text-[10px] sm:text-xs font-semibold">
-                <span>{ratingValue.toFixed(1)}</span>
-                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
-              </div>
-              <span className="text-[10px] sm:text-sm text-gray-500 dark:text-slate-400 font-medium">({reviewsCount.toLocaleString()})</span>
+              {reviewsCount > 0 ? (
+                <>
+                  <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 sm:px-2 py-0.5 rounded-sm text-[10px] sm:text-xs font-semibold">
+                    <span>{ratingValue.toFixed(1)}</span>
+                    <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+                  </div>
+                  <span className="text-[10px] sm:text-sm text-gray-500 dark:text-slate-400 font-medium">({reviewsCount.toLocaleString()})</span>
+                </>
+              ) : (
+                <span className="text-[10px] sm:text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-sm">
+                  New Arrival
+                </span>
+              )}
             </div>
 
             <div className="flex items-baseline gap-2 sm:gap-3 pt-1 sm:pt-2">
@@ -145,7 +153,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Image Container */}
-        <div className="relative aspect-square mb-3 bg-gray-50 dark:bg-slate-800/50 rounded-sm overflow-hidden">
+        <div className="relative aspect-[4/5] sm:aspect-square mb-3 bg-gray-50 dark:bg-slate-800/50 rounded-sm overflow-hidden">
           <Image
             src={
               thumbnail?.public_id
@@ -154,9 +162,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
             }
             alt={name}
             fill
-            className="object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-300 group-hover:scale-110"
+            className={`object-contain mix-blend-multiply dark:mix-blend-normal transition-all duration-500 ${images && images.length > 1 ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           />
+          {images && images.length > 1 && (
+            <Image
+              src={images[1].public_id ? cdn(images[1].public_id, "ecom_thumb", 300) : images[1].url}
+              alt={`${name} alternate view`}
+              fill
+              className="object-contain mix-blend-multiply dark:mix-blend-normal opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-105 absolute inset-0"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            />
+          )}
         </div>
 
         {/* Title */}
@@ -165,25 +182,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </h3>
 
         {/* Rating Row */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 py-0.5 rounded-sm text-xs font-semibold">
-            <span>{ratingValue.toFixed(1)}</span>
-            <Star className="w-2.5 h-2.5 fill-current" />
-          </div>
-          <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">({reviewsCount.toLocaleString()})</span>
+        <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+          {reviewsCount > 0 ? (
+            <>
+              <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 py-0.5 rounded-sm text-[10px] sm:text-xs font-semibold">
+                <span>{ratingValue.toFixed(1)}</span>
+                <Star className="w-2.5 h-2.5 fill-current" />
+              </div>
+              <span className="text-[10px] sm:text-xs text-gray-500 dark:text-slate-400 font-medium">({reviewsCount.toLocaleString()})</span>
+            </>
+          ) : (
+            <span className="text-[10px] sm:text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-sm">
+              New Arrival
+            </span>
+          )}
         </div>
 
         {/* Price Row */}
-        <div className="mt-auto">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-base font-bold dark:text-slate-100">₹{sellingPrice?.toLocaleString()}</span>
+        <div className="mt-auto flex flex-col justify-end min-h-[40px]">
+          <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-2 mb-1">
+            <span className="text-sm sm:text-base font-bold dark:text-slate-100">₹{sellingPrice?.toLocaleString()}</span>
             {maximumRetailPrice && (
-              <span className="text-gray-500 dark:text-slate-500 line-through text-xs">₹{maximumRetailPrice?.toLocaleString()}</span>
+              <span className="text-gray-500 dark:text-slate-500 line-through text-[10px] sm:text-xs">₹{maximumRetailPrice?.toLocaleString()}</span>
+            )}
+            {discount && (
+              <span className="text-green-600 text-[10px] sm:text-xs font-bold ml-auto sm:ml-0">{discount}% off</span>
             )}
           </div>
-          {discount && (
-            <span className="text-green-600 text-xs font-bold">{discount}% off</span>
-          )}
+          <div className="text-[10px] sm:text-xs text-green-700 dark:text-green-500 font-medium mt-0.5">
+            Free delivery
+          </div>
         </div>
       </div>
     </Link>

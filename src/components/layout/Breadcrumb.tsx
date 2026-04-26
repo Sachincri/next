@@ -21,14 +21,14 @@ const Breadcrumb = ({ items, className }: BreadcrumbProps) => {
   // If custom items are provided, use them
   if (items && items.length > 0) {
     return (
-      <nav className={`flex items-center text-[13px] text-gray-500 dark:text-slate-400 space-x-0.5 overflow-hidden whitespace-nowrap ${className || ''}`}>
+      <nav className={`flex items-center text-[13px] text-gray-700 dark:text-slate-300 font-medium space-x-0.5 overflow-hidden whitespace-nowrap ${className || ''}`}>
         {items.map((item, idx) => {
           const isLast = idx === items.length - 1;
           return (
             <div key={idx} className="flex items-center min-w-0">
-              {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-400 dark:text-slate-600 mx-0.5 shrink-0" />}
+              {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-500 dark:text-slate-500 mx-0.5 shrink-0" />}
               {isLast ? (
-                <span className="text-gray-400 dark:text-slate-500 font-normal truncate" title={item.label}>
+                <span className="text-gray-500 dark:text-slate-400 font-semibold truncate" title={item.label}>
                   {item.label}
                 </span>
               ) : item.url ? (
@@ -39,7 +39,7 @@ const Breadcrumb = ({ items, className }: BreadcrumbProps) => {
                   {item.label}
                 </Link>
               ) : (
-                <span className="shrink-0 text-gray-400 dark:text-slate-500">{item.label}</span>
+                <span className="shrink-0 text-gray-500 dark:text-slate-400">{item.label}</span>
               )}
             </div>
           );

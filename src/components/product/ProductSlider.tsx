@@ -67,9 +67,9 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
             <Link
               key={product._id || index}
               href={`/product/${product._id}`}
-              className="flex-shrink-0 w-[160px] snap-start bg-white dark:bg-slate-900 transition-all duration-300 group"
+              className="flex-shrink-0 w-[160px] sm:w-auto snap-start bg-white dark:bg-slate-900 transition-all duration-300 group"
             >
-              <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-800 rounded-md aspect-square mb-2">
+              <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-800 rounded-md aspect-[4/5] sm:aspect-square mb-2">
                 <img
                   src={
                     product.thumbnail?.public_id
@@ -77,21 +77,32 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
                       : (product.images?.[0]?.public_id ? cdn(product.images[0].public_id, "ecom_thumb", 300) : (product.images?.[0]?.url || "/placeholder.png"))
                   }
                   alt={product.name}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  className="absolute inset-0 w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-300 p-2"
                 />
               </div>
               <h3 className="text-xs text-gray-800 dark:text-gray-200 mb-1 line-clamp-2 h-8">{product.name}</h3>
-              <div className="flex items-center gap-1 mb-1">
-                <div className="flex items-center gap-0.5 bg-green-600 text-white px-1 py-0.5 rounded text-[10px]">
-                  <span>{product.ratings?.average || 0}</span>
-                  <Star className="w-2 h-2 fill-current" />
-                </div>
-                <span className="text-[10px] text-gray-500">
-                  ({product.ratings?.count || product.numOfReviews || 0})
-                </span>
+              <div className="flex items-center gap-1 mb-1 min-h-[16px]">
+                {(product.ratings?.count || product.numOfReviews || 0) > 0 ? (
+                  <>
+                    <div className="flex items-center gap-0.5 bg-green-600 text-white px-1 py-0.5 rounded text-[10px]">
+                      <span>{product.ratings?.average || 0}</span>
+                      <Star className="w-2 h-2 fill-current" />
+                    </div>
+                    <span className="text-[10px] text-gray-500">
+                      ({product.ratings?.count || product.numOfReviews || 0})
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-sm">New Arrival</span>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold dark:text-white">₹{(product.sellingPrice)?.toLocaleString()}</span>
+                <span className="text-sm font-semibold dark:text-white">₹{(product.sellingPrice || 0).toLocaleString()}</span>
+                {(product.maximumRetailPrice) && (
+                  <span className="text-gray-500 line-through text-[10px]">
+                    ₹{(product.maximumRetailPrice)?.toLocaleString()}
+                  </span>
+                )}
               </div>
             </Link>
           ))}
@@ -104,7 +115,7 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
               .slice(productStartIndex, productStartIndex + Math.floor(itemsPerView))
               .map((product, index) => (
                 <Link key={product._id || (productStartIndex + index)} href={`/product/${product._id}`} className="bg-white dark:bg-slate-900 transition-all duration-300 group cursor-pointer">
-                  <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-800 rounded-md">
+                  <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-800 rounded-md aspect-[4/5] sm:aspect-square mb-2">
                     <img
                       src={
                         product.thumbnail?.public_id
@@ -112,24 +123,30 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
                           : (product.images?.[0]?.public_id ? cdn(product.images[0].public_id, "ecom_thumb", 300) : (product.images?.[0]?.url || "/placeholder.png"))
                       }
                       alt={product.name}
-                      className="w-full h-32 sm:h-36 md:h-40 object-contain group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-300 p-2"
                     />
                   </div>
-                  <h3 className="text-sm text-gray-800 dark:text-gray-200 mb-2 line-clamp-2">{product.name}</h3>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 py-0.5 rounded text-xs">
-                      <span>{product.ratings?.average || 0}</span>
-                      <Star className="w-2.5 h-2.5 fill-current" />
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      ({product.ratings?.count?.toLocaleString() || product.numOfReviews?.toLocaleString() || 0})
-                    </span>
+                  <h3 className="text-sm text-gray-800 dark:text-gray-200 mb-2 line-clamp-2 h-10">{product.name}</h3>
+                  <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+                    {(product.ratings?.count || product.numOfReviews || 0) > 0 ? (
+                      <>
+                        <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 py-0.5 rounded text-xs">
+                          <span>{product.ratings?.average || 0}</span>
+                          <Star className="w-2.5 h-2.5 fill-current" />
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          ({product.ratings?.count?.toLocaleString() || product.numOfReviews?.toLocaleString() || 0})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-sm">New Arrival</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-base font-medium dark:text-white">₹{(product.sellingPrice)?.toLocaleString()}</span>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-base font-medium dark:text-white">₹{(product.sellingPrice || 0).toLocaleString()}</span>
                     {(product.maximumRetailPrice) && (
                       <span className="text-gray-500 line-through text-sm">
-                        ₹{(product.maximumRetailPrice)?.toLocaleString()}
+                        ₹{(product.maximumRetailPrice).toLocaleString()}
                       </span>
                     )}
                   </div>

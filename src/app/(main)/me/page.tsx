@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ActiveSection, UserProfile } from '@/types';
 const PersonalInformation = dynamic(() => import('@/components/profile/sections/PersonalInfo').then(mod => mod.PersonalInformation), { ssr: false });
@@ -36,6 +37,18 @@ const ProfileContent: React.FC = () => {
   const rewards = user?.rewardPoints || 0;
   const [activeSection, setActiveSection] = useState<ActiveSection>('main');
 
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+        const validTabs: ActiveSection[] = ['personal-info', 'addresses', 'orders', 'rewards', 'reviews', 'help'];
+        if (validTabs.includes(tab as any)) {
+            setActiveSection(tab as any);
+        }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const checkIsMobile = () => {
