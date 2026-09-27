@@ -16,8 +16,16 @@ export const aiApi = apiSlice.injectEndpoints({
                 body: data,
             }),
         }),
+        analystChat: builder.mutation({
+            query: (data: { question: string; history: { role: string; content: string }[] }) => ({
+                url: "/ai/analyst",
+                method: "POST",
+                body: data,
+            }),
+        }),
     }),
     overrideExisting: true,
 });
 
-export const { useChatMutation, useGetSuggestionsMutation } = aiApi;
+export const { useChatMutation, useGetSuggestionsMutation, useAnalystChatMutation } = aiApi;
+

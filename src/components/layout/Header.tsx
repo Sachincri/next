@@ -41,17 +41,14 @@ export function Header() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Only apply on mobile (less than 768px typically)
-      if (window.innerWidth < 768) {
-        if (currentScrollY > lastScrollY && currentScrollY > 80) {
-          // Scrolling down & not at the very top
-          setIsVisible(false);
-        } else {
-          // Scrolling up
-          setIsVisible(true);
-        }
-      } else {
-        // Always show on desktop
+      if (currentScrollY <= 15) {
+        // At the very top: always visible
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 70) {
+        // Scrolling down -> Hide / remove navbar
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up -> Quick in / show navbar
         setIsVisible(true);
       }
 
@@ -90,7 +87,7 @@ export function Header() {
 
   if (isCheckoutPage) {
     return (
-      <nav className="bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md">
+      <nav className="bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md pt-[env(safe-area-inset-top,0px)]">
         <div className="container-custom">
           <div className="flex justify-between items-center h-20 px-4 md:px-8">
             <Link href="/" className="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors">
@@ -118,7 +115,7 @@ export function Header() {
   }
 
   return (
-    <nav className={`bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md transition-transform duration-300 ease-in-out translate-y-0`}>
+    <nav className={`bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md transition-transform duration-300 ease-in-out pt-[env(safe-area-inset-top,0px)] ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       <div className="container-custom">
         <div className="flex justify-between md:justify-center items-center h-20 md:gap-8">
           {/* Mobile menu & Logo Group */}
@@ -155,7 +152,7 @@ export function Header() {
           </div>
 
           {/* User menu */}
-          <div className="flex items-center space-x-4 sm:space-x-8">
+          <div className="flex items-center space-x-3 sm:space-x-8">
             {/* User Notifications */}
             {mounted && isAuthenticated && (
               <div className="text-white">
@@ -163,23 +160,33 @@ export function Header() {
               </div>
             )}
 
-            {/* Login/User dropdown */}
+            {/* Login / User account */}
             <div className="relative group">
-              <Link
-                href={mounted && isAuthenticated ? '/me' : '/login'}
-                className="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors py-2"
-              >
-                <User className="w-4 h-4" />
-                <span className="hidden sm:block font-medium">
-                  {mounted && isAuthenticated ? user?.name : 'Login'}
-                </span>
-              </Link>
+              {mounted && isAuthenticated ? (
+                <Link
+                  href="/me"
+                  className="flex items-center space-x-1.5 sm:space-x-2 text-white hover:text-blue-200 transition-colors py-2"
+                >
+                  <User className="w-4 h-4 text-slate-300" />
+                  <span className="font-medium text-xs sm:text-sm max-w-[80px] sm:max-w-[120px] truncate">
+                    {user?.name || 'Account'}
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center space-x-1 bg-white text-[#0d0e26] hover:bg-slate-100 font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-md text-xs sm:text-sm transition-all shadow-xs"
+                >
+                  <User className="w-3.5 h-3.5 text-[#0d0e26]" />
+                  <span>Login</span>
+                </Link>
+              )}
 
               <div className="absolute top-full left-0 h-2 w-full bg-transparent" />
 
               {/* Dropdown menu for authenticated users */}
               {mounted && isAuthenticated && (
-                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-slate-800 rounded-md shadow-xl dark:shadow-slate-900/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200  border border-gray-100 dark:border-slate-700 overflow-hidden z-[60]">
+                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-slate-800 rounded-md shadow-xl dark:shadow-slate-900/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-100 dark:border-slate-700 overflow-hidden z-[60]">
                   <div className="py-1">
                     {userMenuItems.map((item) => (
                       <Link

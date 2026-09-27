@@ -8,7 +8,6 @@ interface ProductCard {
   image: string
   title: string
   subtitle: string
-
   redirectLink: string
 }
 
@@ -66,14 +65,14 @@ export const HomeProducts: React.FC<ProductSliderProps> = ({ products }) => {
   }
 
   return (
-    <div className="w-full bg-white dark:bg-slate-900 transition-colors duration-300">
+    <div className="w-full bg-transparent transition-colors duration-300">
       {/* Heading */}
-      <div className="px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-slate-100">
+      <div className="px-3 sm:px-6 py-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base sm:text-xl font-bold text-gray-800 dark:text-slate-100">
             {products.heading}
           </h2>
-          <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-xs sm:text-sm">
+          <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold text-xs sm:text-sm">
             VIEW ALL
           </button>
         </div>
@@ -82,26 +81,27 @@ export const HomeProducts: React.FC<ProductSliderProps> = ({ products }) => {
       <div className="relative">
         {/* Mobile: Horizontal scroll container */}
         <div className="block sm:hidden">
-          <div className="flex gap-3 px-4 pb-6 overflow-x-auto snap-x snap-mandatory">
+          <div className="flex gap-2.5 px-3 pb-4 overflow-x-auto snap-x snap-mandatory no-scrollbar">
             {products.items.map(product => (
-              <Link href={product.redirectLink}
+              <Link
+                href={product.redirectLink || "#"}
                 key={product.id}
-                className="bg-white dark:bg-slate-800 text-center flex-shrink-0 w-36 sm:w-40 transition-all duration-300 group cursor-pointer snap-start"
+                className="bg-white dark:bg-slate-800 text-center flex-shrink-0 w-36 rounded-xl p-2 shadow-sm border border-slate-100 dark:border-slate-700/60 transition-all duration-300 group cursor-pointer snap-start"
               >
-                <div className="relative overflow-hidden rounded-md aspect-[4/5] mb-2">
+                <div className="relative overflow-hidden rounded-lg aspect-[4/5] mb-2 bg-slate-50 dark:bg-slate-900/50">
                   <Image
                     src={product.image}
                     alt={product.title}
                     fill
-                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                    className="object-contain p-1 group-hover:scale-105 transition-transform duration-300"
                     sizes="160px"
                   />
                 </div>
-                <div className="p-2">
-                  <h3 className="font-medium text-gray-800 dark:text-slate-200 mb-1 text-xs line-clamp-2 leading-tight">
+                <div className="p-1">
+                  <h3 className="font-medium text-gray-800 dark:text-slate-200 mb-0.5 text-xs line-clamp-2 leading-tight">
                     {product.title}
                   </h3>
-                  <p className="text-gray-500 dark:text-slate-400 text-xs line-clamp-1">{product.subtitle}</p>
+                  <p className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium line-clamp-1">{product.subtitle}</p>
                 </div>
               </Link>
             ))}
@@ -109,32 +109,33 @@ export const HomeProducts: React.FC<ProductSliderProps> = ({ products }) => {
         </div>
 
         {/* Desktop: Grid with navigation */}
-        <div className="hidden sm:block relative px-2 pb-6">
+        <div className="hidden sm:block relative px-4 pb-4">
           {/* Product Grid */}
           <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
             {products.items
               .slice(productStartIndex, productStartIndex + Math.floor(itemsPerView))
               .map(product => (
-                <div
+                <Link
+                  href={product.redirectLink || "#"}
                   key={product.id}
-                  className="bg-white dark:bg-slate-800 text-center transition-all duration-300 group cursor-pointer"
+                  className="bg-white dark:bg-slate-800 text-center rounded-xl p-3 shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-700/60 transition-all duration-300 group cursor-pointer block"
                 >
-                  <div className="relative overflow-hidden rounded-md aspect-[4/5] mb-2">
+                  <div className="relative overflow-hidden rounded-lg aspect-[4/5] mb-2 bg-slate-50 dark:bg-slate-900/50">
                     <Image
                       src={product.image}
                       alt={product.title}
                       fill
-                      className="object-contain group-hover:scale-105 transition-transform duration-300"
+                      className="object-contain p-1.5 group-hover:scale-105 transition-transform duration-300"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 16vw"
                     />
                   </div>
-                  <div className="p-2 sm:p-3">
-                    <h3 className="font-medium text-gray-800 dark:text-slate-200 mb-1 sm:mb-2 text-xs sm:text-sm line-clamp-2 leading-tight">
+                  <div className="p-1">
+                    <h3 className="font-semibold text-gray-800 dark:text-slate-200 mb-1 text-xs sm:text-sm line-clamp-2 leading-tight">
                       {product.title}
                     </h3>
-                    <p className="text-gray-500 dark:text-slate-400 text-xs line-clamp-1">{product.subtitle}</p>
+                    <p className="text-emerald-600 dark:text-emerald-400 text-xs font-medium line-clamp-1">{product.subtitle}</p>
                   </div>
-                </div>
+                </Link>
               ))}
           </div>
 
@@ -142,18 +143,20 @@ export const HomeProducts: React.FC<ProductSliderProps> = ({ products }) => {
           {canGoPrev && (
             <button
               onClick={prevProducts}
-              className="absolute rounded-r-sm left-1 top-1/2 transform -translate-y-1/2 -translate-x-1 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 w-8 sm:w-11 h-16 sm:h-24 flex items-center justify-center shadow-md dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 transition-all z-10"
+              aria-label="Previous Products"
+              className="absolute rounded-r-md left-0 top-1/2 transform -translate-y-1/2 bg-white/95 dark:bg-slate-800/95 hover:bg-white dark:hover:bg-slate-700 w-8 sm:w-10 h-16 sm:h-20 flex items-center justify-center shadow-lg border border-slate-200 dark:border-slate-700 transition-all z-10 backdrop-blur-sm"
             >
-              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-slate-400" />
+              <ChevronLeft className="h-5 w-5 text-gray-700 dark:text-slate-300" />
             </button>
           )}
 
           {canGoNext && (
             <button
               onClick={nextProducts}
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 translate-x-1 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 w-8 sm:w-11 h-16 sm:h-24 flex items-center rounded-l-sm justify-center shadow-md dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 transition-all z-10"
+              aria-label="Next Products"
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white/95 dark:bg-slate-800/95 hover:bg-white dark:hover:bg-slate-700 w-8 sm:w-10 h-16 sm:h-20 flex items-center rounded-l-md justify-center shadow-lg border border-slate-200 dark:border-slate-700 transition-all z-10 backdrop-blur-sm"
             >
-              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-slate-400" />
+              <ChevronRight className="h-5 w-5 text-gray-700 dark:text-slate-300" />
             </button>
           )}
         </div>

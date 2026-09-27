@@ -47,13 +47,13 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
   if (!products?.length) return null
 
   return (
-    <div className="w-full bg-white dark:bg-slate-950 md:px-4">
+    <div className="w-full bg-transparent md:px-2">
       {/* Heading */}
       {heading && (
-        <div className="sm:px-6 py-4">
-          <div className="flex items-center justify-between mb-4 px-2 sm:px-0">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">{heading}</h2>
-            <button className="text-blue-600 hover:text-blue-700 font-medium text-xs sm:text-sm">
+        <div className="sm:px-4 py-3">
+          <div className="flex items-center justify-between mb-3 px-2 sm:px-0">
+            <h2 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white">{heading}</h2>
+            <button className="text-blue-600 hover:text-blue-700 font-semibold text-xs sm:text-sm">
               VIEW ALL
             </button>
           </div>
@@ -62,14 +62,14 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
 
       <div className="relative">
         {/* Mobile: Horizontal scroll container */}
-        <div className="flex sm:hidden overflow-x-auto snap-x snap-mandatory gap-4 pb-4 mx-2 no-scrollbar">
+        <div className="flex sm:hidden overflow-x-auto snap-x snap-mandatory gap-3 pb-4 mx-2 no-scrollbar">
           {products.map((product, index) => (
             <Link
               key={product._id || index}
               href={`/product/${product._id}`}
-              className="flex-shrink-0 w-[160px] sm:w-auto snap-start bg-white dark:bg-slate-900 transition-all duration-300 group"
+              className="flex-shrink-0 w-[150px] snap-start bg-white dark:bg-slate-800 rounded-xl p-2.5 shadow-sm border border-slate-100 dark:border-slate-700/60 transition-all duration-300 group"
             >
-              <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-800 rounded-md aspect-[4/5] sm:aspect-square mb-2">
+              <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-900/60 rounded-lg aspect-[4/5] sm:aspect-square mb-2">
                 <img
                   src={
                     product.thumbnail?.public_id
@@ -80,7 +80,7 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
                   className="absolute inset-0 w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-300 p-2"
                 />
               </div>
-              <h3 className="text-xs text-gray-800 dark:text-gray-200 mb-1 line-clamp-2 h-8">{product.name}</h3>
+              <h3 className="text-xs font-medium text-gray-800 dark:text-gray-200 mb-1 line-clamp-2 h-8">{product.name}</h3>
               <div className="flex items-center gap-1 mb-1 min-h-[16px]">
                 {(product.ratings?.count || product.numOfReviews || 0) > 0 ? (
                   <>
@@ -109,13 +109,13 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
         </div>
 
         {/* Desktop: Grid with navigation */}
-        <div className="hidden sm:block relative px-2 pb-6">
+        <div className="hidden sm:block relative px-2 pb-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
             {products
               .slice(productStartIndex, productStartIndex + Math.floor(itemsPerView))
               .map((product, index) => (
-                <Link key={product._id || (productStartIndex + index)} href={`/product/${product._id}`} className="bg-white dark:bg-slate-900 transition-all duration-300 group cursor-pointer">
-                  <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-800 rounded-md aspect-[4/5] sm:aspect-square mb-2">
+                <Link key={product._id || (productStartIndex + index)} href={`/product/${product._id}`} className="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md border border-slate-100 dark:border-slate-700/60 transition-all duration-300 group cursor-pointer block">
+                  <div className="relative overflow-hidden bg-gray-50 dark:bg-slate-900/60 rounded-lg aspect-[4/5] sm:aspect-square mb-2">
                     <img
                       src={
                         product.thumbnail?.public_id
@@ -126,8 +126,8 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
                       className="absolute inset-0 w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-300 p-2"
                     />
                   </div>
-                  <h3 className="text-sm text-gray-800 dark:text-gray-200 mb-2 line-clamp-2 h-10">{product.name}</h3>
-                  <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5 line-clamp-2 h-9">{product.name}</h3>
+                  <div className="flex items-center gap-2 mb-1.5 min-h-[18px]">
                     {(product.ratings?.count || product.numOfReviews || 0) > 0 ? (
                       <>
                         <div className="flex items-center gap-1 bg-green-600 text-white px-1.5 py-0.5 rounded text-xs">
@@ -142,16 +142,16 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
                       <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-sm">New Arrival</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-base font-medium dark:text-white">₹{(product.sellingPrice || 0).toLocaleString()}</span>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-sm sm:text-base font-bold dark:text-white">₹{(product.sellingPrice || 0).toLocaleString()}</span>
                     {(product.maximumRetailPrice) && (
-                      <span className="text-gray-500 line-through text-sm">
+                      <span className="text-gray-500 line-through text-xs">
                         ₹{(product.maximumRetailPrice).toLocaleString()}
                       </span>
                     )}
                   </div>
                   {product.discount && (
-                    <span className="text-green-600 text-sm font-medium">{product.discount}% off</span>
+                    <span className="text-green-600 text-xs font-semibold">{product.discount}% off</span>
                   )}
                 </Link>
               ))}

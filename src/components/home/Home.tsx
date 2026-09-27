@@ -26,10 +26,7 @@ interface HomeProps {
   initialData?: any;
 }
 
-
 export default function Home({ initialData }: HomeProps) {
-  // Skip the client-side fetch entirely when the server already provided initialData (ISR).
-  // This prevents the double-fetch pattern where both SSR and client RTK Query fire simultaneously.
   const { data: apiData, error, isLoading } = useGetHomePageDataQuery(undefined, {
     skip: !!initialData,
   });
@@ -42,6 +39,7 @@ export default function Home({ initialData }: HomeProps) {
   const recentlyViewedProducts = (localRecentlyViewed && localRecentlyViewed.length > 0)
     ? localRecentlyViewed
     : (serverRecentlyViewed || []);
+
   useEffect(() => {
     if (error) {
       const err = error as any;
@@ -90,16 +88,19 @@ export default function Home({ initialData }: HomeProps) {
   };
 
   return (
-    <main className="min-h-screen w-full  dark:bg-slate-950 overflow-x-hidden">
-
-      <div className="md:mx-2 md:mt-2">
-        <CategorySection />
+    <main className="min-h-screen w-full bg-[#f1f2f4] dark:bg-slate-950 overflow-x-hidden pb-12">
+      {/* Category Section (Zero gap on mobile, margins on sm+) */}
+      <div className="w-full max-w-[1320px] mx-auto px-0 sm:px-6 md:px-8 lg:px-12 pt-0 sm:pt-3">
+        <div className="rounded-none sm:rounded-xl overflow-hidden shadow-sm">
+          <CategorySection />
+        </div>
       </div>
-      {/* Main Content */}
-      <div className="space-y-2">
+
+      {/* Main Content Container (Zero gap on mobile, margins on sm+) */}
+      <div className="w-full max-w-[1320px] mx-auto px-0 sm:px-6 md:px-8 lg:px-12 space-y-1.5 sm:space-y-3 mt-1 sm:mt-3">
         {/* Carousel Section */}
         {homeData.carousel?.items && homeData.carousel.items.length > 0 && (
-          <div className="">
+          <div className="w-full">
             <CarouselSlider banners={homeData.carousel.items.map((it: any) => ({
               id: it._id,
               image: it.image?.url || it.image,
@@ -111,15 +112,15 @@ export default function Home({ initialData }: HomeProps) {
         {/* AI Suggestions Section */}
         <AISuggestions productId={recentlyViewedProducts[0]?._id} />
 
-        {/* Sections */}
+        {/* Dynamic Sections */}
         {homeData.sections && Array.isArray(homeData.sections) && homeData.sections.length > 0 ? (
           homeData.sections.map((section: any) => (
             <div
               key={section._id}
-              className={`transition-all duration-500 ${getSectionClass(section.bgGradient, section.type)}`}
+              className={`rounded-none sm:rounded-xl overflow-hidden shadow-sm transition-all duration-500 ${getSectionClass(section.bgGradient, section.type)}`}
               style={getSectionStyle(section.bgGradient)}
             >
-              <div className=" py-2">
+              <div className="py-2">
                 {/* Banner Sections */}
                 {(section.type === "banner1" || section.type === "banner2" || section.type === "banner3") && section.banners && section.banners.length > 0 && (
                   <BannerSection
@@ -158,7 +159,7 @@ export default function Home({ initialData }: HomeProps) {
                   }} />
                 )}
 
-                {/*  Quad Grid Section */}
+                {/* Quad Grid Section */}
                 {section.type === "quad_grid" && section.quads && (
                   <QuadGrid
                     mobileColumns={section.mobileColumns}
@@ -203,12 +204,9 @@ export default function Home({ initialData }: HomeProps) {
           )
         )}
 
-        {/* Infinite Scroll Section */}
-        {/* <HomeInfiniteScroll /> */}
-
         {/* Recently Viewed Section */}
         {recentlyViewedProducts.length > 0 && (
-          <div className="pb-8">
+          <div className="pb-8 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-800">
             <ProductSlider products={recentlyViewedProducts} heading="Recently Viewed" />
           </div>
         )}

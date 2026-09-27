@@ -42,8 +42,10 @@ import {
   Megaphone,
 } from "lucide-react"
 import dynamic from "next/dynamic"
+import { BrainCircuit } from "lucide-react"
 const ThemeToggle = dynamic(() => import("./theme-toggle").then(mod => mod.ThemeToggle), { ssr: false })
 const NotificationsPopover = dynamic(() => import("./notifications-popover").then(mod => mod.NotificationsPopover), { ssr: false })
+const AiAnalystDrawer = dynamic(() => import("./ai-analyst/AiAnalystDrawer"), { ssr: false })
 import { useAppSelector } from "@/redux/hooks"
 import { useLogoutMutation } from "@/redux/api/userApi"
 import toast from "react-hot-toast"
@@ -94,6 +96,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const { user } = useAppSelector((state) => state.user)
   const [isMounted, setIsMounted] = useState(false)
+  const [isAnalystOpen, setIsAnalystOpen] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
@@ -196,6 +199,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Main Content */}
           <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
         </SidebarInset>
+
+        {/* Floating AI Analyst Button */}
+        <button
+          onClick={() => setIsAnalystOpen(true)}
+          className="fixed bottom-6 right-6 z-50 group flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-violet-500/30 active:scale-95"
+          title="AI Data Analyst"
+        >
+          <BrainCircuit className="h-6 w-6 transition-transform duration-300 group-hover:rotate-12" />
+          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-green-500 ring-2 ring-[#0f0f1a]" />
+          </span>
+          {/* Tooltip */}
+          <span className="absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+            🧠 AI Analyst
+          </span>
+        </button>
+
+        {/* AI Analyst Drawer */}
+        <AiAnalystDrawer isOpen={isAnalystOpen} onClose={() => setIsAnalystOpen(false)} />
       </div>
     </SidebarProvider>
   )
