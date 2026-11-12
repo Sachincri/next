@@ -74,7 +74,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ params = {} }) => {
 
   // Handlers
   const handlePriceChange = useCallback((_: Event | null, newPrice: number | number[]) => {
-    const [min, max] = Array.isArray(newPrice) ? newPrice : [newPrice, 100000];
+    const [min, max] = Array.isArray(newPrice) ? newPrice : [newPrice, 1000000];
     updateParams({ minPrice: min, maxPrice: max, page: 1 });
   }, [updateParams]);
 
@@ -152,7 +152,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ params = {} }) => {
     if (discount > 0) {
       chips.push({ id: 'discount', label: `${discount}%+ Off`, onRemove: clearDiscountFilters });
     }
-    if (price[0] > 0 || price[1] < 100000) {
+    if (price[0] > 0 || (price[1] < 10000000 && searchParams.get('maxPrice'))) {
       chips.push({
         id: 'price',
         label: `₹${price[0].toLocaleString()} – ₹${price[1].toLocaleString()}`,

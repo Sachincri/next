@@ -1,6 +1,7 @@
 import React from "react";
+import Link from "next/link";
 import { User, ActiveSection, UserProfile } from "@/types";
-import { Gift, HelpCircle, LogOut, Mail, MapPin, Package, Phone, Star, User as UserIcon } from "lucide-react";
+import { Gift, HelpCircle, LogOut, Mail, MapPin, Package, Phone, Star, Trophy, User as UserIcon, Wallet } from "lucide-react";
 
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeSection, onChange,
     { id: 'orders', icon: Package, label: 'My Orders', },
     { id: 'rewards', icon: Gift, label: 'My Rewards', },
     { id: 'reviews', icon: Star, label: 'My Reviews & Ratings', },
+    { id: 'affiliate', icon: Trophy, label: 'Affiliate & Leaderboard', },
     { id: 'help', icon: HelpCircle, label: 'Help & Support', }
   ];
 
@@ -75,6 +77,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeSection, onChange,
             </li>
           ))}
         </ul>
+
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <Link
+            href="/earn"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 hover:from-indigo-500/20 hover:to-violet-500/20 transition-all font-semibold text-xs group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Wallet className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Affiliate Wallet & Contests</span>
+            </div>
+            <span className="text-xs font-bold text-indigo-500 group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
+        </div>
 
 
         <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800">

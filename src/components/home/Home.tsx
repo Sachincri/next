@@ -10,10 +10,13 @@ const QuadGrid = dynamic(() => import("./QuadGrid"));
 const CarouselSlider = dynamic(() => import("./CustomCarousel"));
 const SingleProductCarousel = dynamic(() => import("./SingleProductCarousel"));
 const VideoReelsSection = dynamic(() => import("./VideoReelsSection"), { ssr: false });
+const HomeInfiniteScroll = dynamic(() => import("./HomeInfiniteScroll").then(mod => mod.HomeInfiniteScroll), { ssr: false });
 // CategorySection is above-the-fold but client-only (uses RTK Query), keep lazy to avoid bundle bloat
 const CategorySection = dynamic(() => import("./CategorySection"));
 const AISuggestions = dynamic(() => import("../product/AISuggestions"), { ssr: false });
 const ProductSlider = dynamic(() => import("../product/ProductSlider").then(mod => mod.ProductSlider), { ssr: false });
+const ForYouSlider = dynamic(() => import("../product/RecommendationSliders").then(mod => mod.ForYouSlider), { ssr: false });
+const TrendingSlider = dynamic(() => import("../product/RecommendationSliders").then(mod => mod.TrendingSlider), { ssr: false });
 
 import toast from "react-hot-toast";
 import { useGetHomePageDataQuery } from "@/redux/api/homeApi";
@@ -112,6 +115,12 @@ export default function Home({ initialData }: HomeProps) {
         {/* AI Suggestions Section */}
         <AISuggestions productId={recentlyViewedProducts[0]?._id} />
 
+        {/* AI Recommendations */}
+        <div className="w-full space-y-4">
+          <ForYouSlider />
+          <TrendingSlider />
+        </div>
+
         {/* Dynamic Sections */}
         {homeData.sections && Array.isArray(homeData.sections) && homeData.sections.length > 0 ? (
           homeData.sections.map((section: any) => (
@@ -193,6 +202,10 @@ export default function Home({ initialData }: HomeProps) {
                     }))}
                   />
                 )}
+                {/* Infinite Scroll Section */}
+                {section.type === "infiniteScroll" && (
+                  <HomeInfiniteScroll />
+                )}
               </div>
             </div>
           ))
@@ -209,6 +222,11 @@ export default function Home({ initialData }: HomeProps) {
           <div className="pb-8 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-800">
             <ProductSlider products={recentlyViewedProducts} heading="Recently Viewed" />
           </div>
+        )}
+
+        {/* Global Infinite Scroll Products Feed (mapped across all products) */}
+        {(!homeData.sections || !homeData.sections.some((s: any) => s.type === "infiniteScroll")) && (
+          <HomeInfiniteScroll />
         )}
       </div>
     </main>

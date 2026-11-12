@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Mic, MicOff, Loader2 } from "lucide-react"
+import toast from "react-hot-toast"
 
 interface AiVoiceButtonProps {
   onTranscript: (text: string) => void
@@ -51,9 +52,14 @@ export default function AiVoiceButton({ onTranscript, disabled }: AiVoiceButtonP
       }
 
       recognition.onerror = (event: any) => {
-        console.error("Speech Recognition Error:", event.error)
         setIsListening(false)
         setInterimText("")
+
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          toast.error("Microphone access was denied. Please allow microphone access in your browser settings.")
+        } else if (event.error !== "no-speech" && event.error !== "aborted") {
+          toast.error("Voice input error. Please try again or type your question.")
+        }
       }
 
       recognition.onend = () => {
@@ -65,41 +71,45 @@ export default function AiVoiceButton({ onTranscript, disabled }: AiVoiceButtonP
 
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort() } catch {}
+        try {
+          recognitionRef.current.abort()
+        } catch { }
       }
     }
   }, [])
 
-  const toggleListening = useCallback(async () => {
+  const toggleListening = useCallback(() => {
     if (!recognitionRef.current) return
 
     if (isListening) {
-      recognitionRef.current.stop()
+      try {
+        recognitionRef.current.stop()
+      } catch { }
       setIsListening(false)
       setInterimText("")
     } else {
       try {
-        // Check for secure context (SpeechRecognition & MediaDevices are blocked on insecure origins)
         if (typeof window !== "undefined" && !window.isSecureContext) {
-          alert("Speech input requires a secure connection (HTTPS) or accessing via 'localhost'. Browsers block microphone access on insecure HTTP connections.")
+          toast.error("Voice input requires HTTPS or localhost.")
           return
         }
 
-        // Prompt the user for microphone permission if not already granted
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-          // Stop the stream tracks immediately so SpeechRecognition can use the microphone
-          stream.getTracks().forEach(track => track.stop())
-        } else {
-          alert("Microphone APIs are unavailable on this connection. Ensure you are on HTTPS or localhost.")
-          return
-        }
-        
         recognitionRef.current.start()
         setIsListening(true)
       } catch (err: any) {
-        console.error("Microphone permission request failed:", err)
-        alert("Microphone permission is required for voice input. Please check your browser/system settings and try again.")
+        setIsListening(false)
+        if (err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")) {
+          toast.error("Microphone permission denied. Please enable mic access in your browser.")
+        } else if (err?.name === "InvalidStateError") {
+          // Already active, restart cleanly
+          try {
+            recognitionRef.current.abort()
+            recognitionRef.current.start()
+            setIsListening(true)
+          } catch { }
+        } else {
+          toast.error("Could not start voice recognition. Please try typing.")
+        }
       }
     }
   }, [isListening])

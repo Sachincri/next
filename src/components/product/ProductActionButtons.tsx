@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { useProductSelection } from "./ProductSelectionContext";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { ProductShareEarnButton } from "./ProductShareEarnButton";
 
 interface ProductActionButtonsProps {
     productId: string;
@@ -269,6 +270,7 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
                         {renderColors()}
                         {renderSizes()}
                         {renderButtons()}
+                        <ProductShareEarnButton productId={productId} productName={name} />
                     </div>
                     {renderSticky()}
                 </>

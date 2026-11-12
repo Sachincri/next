@@ -16,6 +16,7 @@ const AISuggestions = dynamic(() => import('./AISuggestions'), {
     loading: () => <div className="h-24 w-full bg-gray-50 animate-pulse rounded-xl" />
 });
 
+const FrequentlyBoughtSlider = dynamic(() => import('./RecommendationSliders').then(mod => mod.FrequentlyBoughtSlider), { ssr: false });
 const ProductSlider = dynamic(() => import('./ProductSlider').then(mod => mod.ProductSlider), {
     ssr: false
 });
@@ -63,6 +64,10 @@ export const ClientIslands: React.FC<ClientIslandsProps> = (props) => {
 
             <div className="-mx-4 sm:mx-0">
                 <AISuggestions productId={props.productId} />
+            </div>
+
+            <div className="-mx-4 sm:mx-0">
+                <FrequentlyBoughtSlider productId={props.productId} />
             </div>
 
             {props.similarProducts && props.similarProducts.length > 0 && (

@@ -17,15 +17,40 @@ export const aiApi = apiSlice.injectEndpoints({
             }),
         }),
         analystChat: builder.mutation({
-            query: (data: { question: string; history: { role: string; content: string }[] }) => ({
-                url: "/ai/analyst",
+            query: (data: {
+                question: string;
+                history?: { role: string; content: string }[];
+                conversationHistory?: { role: string; content: string }[];
+                sessionId?: string;
+            }) => ({
+                url: "/admin/ai-analyst/ask",
                 method: "POST",
                 body: data,
             }),
+        }),
+        askAnalyst: builder.mutation({
+            query: (data: {
+                question: string;
+                conversationHistory?: { role: string; content: string }[];
+                sessionId?: string;
+            }) => ({
+                url: "/admin/ai-analyst/ask",
+                method: "POST",
+                body: data,
+            }),
+        }),
+        getProactiveAlerts: builder.query<any, void>({
+            query: () => "/admin/ai-analyst/proactive-alerts",
+            providesTags: ["Admin"],
         }),
     }),
     overrideExisting: true,
 });
 
-export const { useChatMutation, useGetSuggestionsMutation, useAnalystChatMutation } = aiApi;
-
+export const {
+    useChatMutation,
+    useGetSuggestionsMutation,
+    useAnalystChatMutation,
+    useAskAnalystMutation,
+    useGetProactiveAlertsQuery,
+} = aiApi;

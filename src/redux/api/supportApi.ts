@@ -8,25 +8,36 @@ export const supportApi = apiSlice.injectEndpoints({
                 method: "POST",
                 body,
             }),
-            invalidatesTags: ["Order"], // Or a new Support tag
+            invalidatesTags: ["Support", "Order"],
         }),
         getMySupportRequests: builder.query<any, void>({
             query: () => "/support/my-requests",
-            providesTags: ["Order"],
+            providesTags: ["Support"],
         }),
         // Admin endpoints
         getAllSupportRequests: builder.query<any, void>({
             query: () => "/support/all-requests",
-            providesTags: ["Admin"],
+            providesTags: ["Admin", "Support"],
         }),
-        updateSupportStatus: builder.mutation<any, { id: string; status?: string; priority?: string }>({
-
+        getSupportRequestDetails: builder.query<any, string>({
+            query: (id) => `/support/${id}`,
+            providesTags: ["Support"],
+        }),
+        updateSupportStatus: builder.mutation<any, { id: string; status?: string; priority?: string; adminNotes?: string }>({
             query: ({ id, ...body }) => ({
                 url: `/support/${id}`,
                 method: "PATCH",
                 body,
             }),
-            invalidatesTags: ["Admin"],
+            invalidatesTags: ["Admin", "Support"],
+        }),
+        replyToSupportRequest: builder.mutation<any, { id: string; message: string; status?: string }>({
+            query: ({ id, ...body }) => ({
+                url: `/support/${id}/reply`,
+                method: "POST",
+                body,
+            }),
+            invalidatesTags: ["Admin", "Support"],
         }),
     }),
 });
@@ -35,5 +46,7 @@ export const {
     useSubmitSupportRequestMutation,
     useGetMySupportRequestsQuery,
     useGetAllSupportRequestsQuery,
+    useGetSupportRequestDetailsQuery,
     useUpdateSupportStatusMutation,
+    useReplyToSupportRequestMutation,
 } = supportApi;

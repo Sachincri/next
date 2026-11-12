@@ -25,7 +25,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   sellingPrice,
   maximumRetailPrice,
   discount,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  badgeText,
+  badgeColor
 }) => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state: RootState) => state.user);
@@ -151,6 +153,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Heart className="w-4 h-4 text-gray-600 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-500" />
           </button>
         </div>
+
+        {/* Dynamic Badge */}
+        {badgeText && (
+          <div className="absolute top-2 left-2 z-10 pointer-events-none">
+            <span className={`px-2 py-1 text-[10px] sm:text-xs font-bold rounded-sm shadow-sm ${badgeColor || 'bg-indigo-500 text-white'}`}>
+              {badgeText}
+            </span>
+          </div>
+        )}
 
         {/* Image Container */}
         <div className="relative aspect-[4/5] sm:aspect-square mb-3 bg-gray-50 dark:bg-slate-800/50 rounded-sm overflow-hidden">

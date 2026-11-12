@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Base Badge -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bgGrad)"/>
+  <rect x="3" y="3" width="58" height="58" rx="13" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+  
+  <!-- Shopping Bag Handle -->
+  <path d="M24 23 C24 16, 40 16, 40 23" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Shopping Bag Body -->
+  <path d="M16 22 L48 22 L44 52 C43.5 54 42 55 40 55 L24 55 C22 55 20.5 54 20 52 Z" fill="#ffffff" />
+  
+  <!-- Stylized E / Shelves in Bag -->
+  <path d="M26 31 L38 31 M26 38 L35 38 M26 45 L38 45" stroke="url(#bgGrad)" stroke-width="3.2" stroke-linecap="round"/>
+  
+  <!-- Gold Sparkle / Plus on Top Right -->
+  <polygon points="48,11 50.5,17 56.5,19.5 50.5,22 48,28 45.5,22 39.5,19.5 45.5,17" fill="url(#goldGrad)"/>
+</svg>

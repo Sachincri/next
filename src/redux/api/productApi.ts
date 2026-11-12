@@ -18,6 +18,7 @@ export const productApi = apiSlice.injectEndpoints({
                 brand?: string;
                 ratings?: number;
                 discount?: number;
+                limit?: number;
             }
         >({
             query: ({
@@ -28,12 +29,14 @@ export const productApi = apiSlice.injectEndpoints({
                 brand = "",
                 ratings = 0,
                 discount = 0,
+                limit = 20,
             }) => {
                 const params = new URLSearchParams();
                 if (keyword) params.set('keyword', keyword);
                 params.set('page', String(currentPage));
-                params.set('price[gte]', String(price[0]));
-                params.set('price[lte]', String(price[1]));
+                params.set('limit', String(limit));
+                if (price && price[0] > 0) params.set('price[gte]', String(price[0]));
+                if (price && price[1] < 10000000) params.set('price[lte]', String(price[1]));
                 if (ratings > 0) params.set('rating[gte]', String(ratings));
                 if (discount > 0) params.set('discount[gte]', String(discount));
                 if (category) params.set('category', category);

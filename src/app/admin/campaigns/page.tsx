@@ -38,6 +38,7 @@ import {
   ExternalLink
 } from "lucide-react"
 import toast from "react-hot-toast"
+import { copyToClipboardSafe } from "@/lib/utils"
 import { useGenerateCampaignDataMutation, useBroadcastCampaignMutation } from "@/redux/api/adminApi"
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -127,7 +128,18 @@ export default function CampaignStudioPage() {
   const [history, setHistory] = useState<SavedCampaign[]>([])
   const [showHistory, setShowHistory] = useState(false)
 
-  useEffect(() => { setHistory(getHistory()) }, [])
+  useEffect(() => {
+    const hist = getHistory()
+    setHistory(hist)
+    // If no campaign is actively generated, restore the most recent one from history so the user sees it immediately
+    if (hist.length > 0 && hist[0]?.data) {
+      setGeneratedData(hist[0].data)
+      if (hist[0].topic) setTopic(hist[0].topic)
+      if (hist[0].type) setType(hist[0].type)
+      if (hist[0].tone) setTone(hist[0].tone)
+      if (hist[0].channels) setChannels(hist[0].channels)
+    }
+  }, [])
 
   // ── Channel toggle ─────────────────────────────────────────────────
   const toggleChannel = (ch: string) =>
@@ -172,9 +184,9 @@ export default function CampaignStudioPage() {
   }
 
   // ── Copy ────────────────────────────────────────────────────────────
-  const handleCopy = (text: string, label: string) => {
+  const handleCopy = async (text: string, label: string) => {
     if (!text) return
-    navigator.clipboard.writeText(text)
+    await copyToClipboardSafe(text)
     toast.success(`${label} copied`)
   }
 
@@ -291,9 +303,13 @@ export default function CampaignStudioPage() {
                 <div className="space-y-2">
                   {history.map(item => (
                     <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group border border-transparent hover:border-slate-100">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0">
-                        <Megaphone className="h-5 w-5 text-indigo-600" />
-                      </div>
+                      {item.data?.imageUrl ? (
+                        <img src={item.data.imageUrl} alt="Campaign Thumb" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-slate-200" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0">
+                          <Megaphone className="h-5 w-5 text-indigo-600" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0 cursor-pointer" onClick={() => loadFromHistory(item)}>
                         <p className="text-sm font-semibold text-slate-800 truncate">{item.topic}</p>
                         <p className="text-xs text-slate-400">{item.createdAt} · {item.type} · {item.tone}</p>
@@ -488,15 +504,30 @@ export default function CampaignStudioPage() {
                       <ImageIcon className="h-3.5 w-3.5" /> AI Generated Banner
                     </span>
                   </div>
-                  <div className="absolute top-4 right-4 z-10">
-                    <Button size="sm" variant="secondary" className="bg-white/80 backdrop-blur-sm shadow-md hover:bg-white rounded-full h-8 text-xs"
+                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+                    {generatedData.imageUrl && (
+                      <a
+                        href={generatedData.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 bg-white/80 backdrop-blur-sm shadow-md hover:bg-white rounded-full h-8 px-3 text-xs font-semibold text-slate-700 transition-all hover:scale-105"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 text-indigo-600" /> Full Image
+                      </a>
+                    )}
+                    <Button size="sm" variant="secondary" className="bg-white/80 backdrop-blur-sm shadow-md hover:bg-white rounded-full h-8 text-xs font-semibold"
                       onClick={handleGenerate}>
                       <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
                     </Button>
                   </div>
                   {generatedData.imageUrl ? (
-                    <div className="bg-slate-100 flex items-center justify-center min-h-[280px] relative overflow-hidden">
-                      <img src={generatedData.imageUrl} alt="AI Campaign Banner" className="w-full h-full object-cover max-h-[420px] transition-transform duration-700 group-hover:scale-[1.03]" />
+                    <div className="bg-slate-900/5 flex items-center justify-center min-h-[260px] relative overflow-hidden">
+                      <img
+                        src={generatedData.imageUrl}
+                        alt="AI Campaign Banner"
+                        className="w-full h-auto min-h-[240px] max-h-[480px] object-cover block transition-transform duration-700 group-hover:scale-[1.02]"
+                        loading="eager"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
                     </div>
                   ) : (
@@ -504,7 +535,7 @@ export default function CampaignStudioPage() {
                       <div className="p-4 bg-orange-100 text-orange-600 rounded-full"><ImageIcon className="h-8 w-8" /></div>
                       <div>
                         <h3 className="font-bold text-slate-700">Banner Generation Skipped</h3>
-                        <p className="text-sm text-slate-500 mt-1">Image API returned no result. Check your NVIDIA_API_KEY in .env or set IMAGE_PROVIDER=test</p>
+                        <p className="text-sm text-slate-500 mt-1">Image API returned no result. Click 'Regenerate' or check your Cloudinary settings.</p>
                       </div>
                     </div>
                   )}
@@ -707,7 +738,7 @@ export default function CampaignStudioPage() {
                     disabled={isBroadcasting}
                     className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white border-0 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.7)] h-16 px-12 rounded-full font-black text-lg transition-all hover:scale-105 hover:shadow-[0_15px_50px_-10px_rgba(16,185,129,0.9)] w-full sm:w-auto"
                   >
-                    <Send className="h-6 w-6 mr-3 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /> 
+                    <Send className="h-6 w-6 mr-3 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                     1-CLICK BROADCAST ALL
                   </Button>
                   <p className="text-sm font-medium text-slate-400">Review your generated content across all channels before sending.</p>

@@ -13,8 +13,8 @@ export const useProductFilters = () => {
             ratings: Number(searchParams.get('ratings')) || 0,
             discount: Number(searchParams.get('discount')) || 0,
             price: [
-                Number(searchParams.get('minPrice')) || 0,
-                Number(searchParams.get('maxPrice')) || 100000,
+                searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : 0,
+                searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : 10000000,
             ] as number[],
         }
     }, [searchParams])

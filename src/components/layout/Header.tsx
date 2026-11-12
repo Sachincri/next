@@ -3,7 +3,7 @@
 import React from 'react';
 // import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, User, Package, Heart, LayoutDashboard, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Package, Heart, LayoutDashboard, LogOut, Trophy, Sparkles } from 'lucide-react';
 import { useAppSelector } from '@/redux/hooks';
 import { RootState } from '@/redux/store';
 import dynamic from 'next/dynamic';
@@ -63,6 +63,8 @@ export function Header() {
 
   const userMenuItems = [
     { icon: <User className="w-4 h-4" />, name: 'My Account', path: '/me' },
+    { icon: <Trophy className="w-4 h-4 text-amber-500" />, name: 'Leaderboard', path: '/leaderboard' },
+    { icon: <Sparkles className="w-4 h-4 text-indigo-400" />, name: 'Share & Earn', path: '/earn' },
     { icon: <Package className="w-4 h-4" />, name: 'My Orders', path: '/me?tab=orders' },
     { icon: <ShoppingCart className="w-4 h-4" />, name: 'My Cart', path: '/cart' },
     { icon: <Heart className="w-4 h-4" />, name: 'WishList', path: '/wishlist' },

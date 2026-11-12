@@ -137,7 +137,7 @@ const CategorySection: React.FC = () => {
                                                 src={categoryImage}
                                                 alt={categoryName}
                                                 fill
-                                                className="object-contain"
+                                                className="object-contain dark:invert dark:brightness-200"
                                                 sizes="36px"
                                             />
                                         ) : (

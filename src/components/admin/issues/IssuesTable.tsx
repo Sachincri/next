@@ -20,7 +20,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Loader2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Loader2, ArrowUpDown, Eye } from "lucide-react";
+import Link from "next/link";
 import { useUpdateSupportStatusMutation } from "@/redux/api/supportApi";
 import toast from "react-hot-toast";
 
@@ -153,9 +154,13 @@ export const IssuesTable: React.FC<IssuesTableProps> = ({ data, isLoading }) => 
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="max-w-[200px] truncate font-medium" title={issue.subject}>
+                                            <Link
+                                                href={`/admin/issues/${issue._id}`}
+                                                className="max-w-[200px] truncate font-medium hover:text-indigo-600 hover:underline block"
+                                                title={issue.subject}
+                                            >
                                                 {issue.subject}
-                                            </div>
+                                            </Link>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className="font-normal">
@@ -172,16 +177,28 @@ export const IssuesTable: React.FC<IssuesTableProps> = ({ data, isLoading }) => 
                                                 {issue.priority}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                                        <span className="sr-only">Open menu</span>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                                        <TableCell className="text-right whitespace-nowrap">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <Button variant="outline" size="sm" asChild className="h-8 px-2.5 text-xs rounded-xl gap-1">
+                                                    <Link href={`/admin/issues/${issue._id}`}>
+                                                        <Eye className="w-3.5 h-3.5" /> View
+                                                    </Link>
+                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/admin/issues/${issue._id}`} className="flex items-center gap-2 cursor-pointer font-semibold text-indigo-600">
+                                                                <Eye className="w-4 h-4" /> View Details
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuLabel>Update Status</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
                                                     {["Pending", "In Progress", "Resolved", "Closed"].map((s) => (
                                                         <DropdownMenuItem
@@ -205,7 +222,8 @@ export const IssuesTable: React.FC<IssuesTableProps> = ({ data, isLoading }) => 
                                                         </DropdownMenuItem>
                                                     ))}
                                                 </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                </DropdownMenu>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))

@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { ReportDisputeModal } from "./ReportDisputeModal";
+import { useGetMyDisputesQuery } from "@/redux/api/disputeApi";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useGetOrderDetailsQuery, useGetOrderTrackingQuery } from "@/redux/api/orderApi";
 import { Loader } from "@/components/layout/Loader";
-import { ArrowLeft, Download, Phone, Star, Truck, Package, ShieldCheck, MapPin, ExternalLink } from "lucide-react";
+import { ArrowLeft, Download, Phone, Star, Truck, Package, ShieldCheck, MapPin, ExternalLink, ShieldAlert, AlertTriangle, Clock } from "lucide-react";
 import { OrderTracker } from "./TrackStepper";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,6 +21,9 @@ const OrderDetails = () => {
   const { data: trackingData } = useGetOrderTrackingQuery(params?.id as string, { 
     skip: !params?.id || !isAutomatedShipment 
   });
+  const [isDisputeOpen, setIsDisputeOpen] = useState(false);
+  const { data: disputesData } = useGetMyDisputesQuery(undefined, { skip: !params?.id });
+  const activeDispute = disputesData?.data?.claims?.find((c: any) => String(c.order?._id || c.order) === String(params?.id));
 
   useEffect(() => {
     if (error) {
@@ -255,24 +260,64 @@ const OrderDetails = () => {
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
                     All orders are verified and protected with our 100% genuine product guarantee and contactless delivery options.
                   </p>
-                  <div className="space-y-2 text-xs">
-                    <button
-                      onClick={() => router.push('/me?section=help')}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 font-medium text-slate-700 dark:text-slate-300 transition-colors"
-                    >
-                      Need help with this order?
-                    </button>
-                    <button
-                      onClick={() => router.push('/me?section=help')}
-                      className="w-full text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 font-medium text-slate-700 dark:text-slate-300 transition-colors"
-                    >
-                      Request Return or Exchange
-                    </button>
-                  </div>
+                  {activeDispute ? (
+                    <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                          <ShieldAlert className="w-4 h-4" />
+                          Claim #{activeDispute.claimNumber}
+                        </span>
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                          {activeDispute.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-snug">
+                        Item: <strong className="text-slate-900 dark:text-white">{activeDispute.orderItem?.productName}</strong>
+                      </p>
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                        {activeDispute.status === 'awaiting_admin_evidence' && 'Warehouse checking packing footage & dispatch weight.'}
+                        {activeDispute.status === 'analyzing_by_ai' && 'AI Forensic engine is analyzing photos & seals.'}
+                        {activeDispute.status === 'ai_reviewed' && 'AI verification complete. Admin finalizing resolution.'}
+                        {activeDispute.status === 'approved_refund' && 'Refund credited to your Wallet!'}
+                        {activeDispute.status === 'approved_replacement' && 'Replacement package approved for dispatch!'}
+                        {activeDispute.status === 'rejected' && 'Claim reviewed and rejected.'}
+                        {activeDispute.status === 'escalated_to_courier' && 'Escalated to courier partner for transit investigation.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 text-xs">
+                      <button
+                        onClick={() => setIsDisputeOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-semibold transition-all shadow-xs"
+                      >
+                        <ShieldAlert className="w-4 h-4 text-amber-500" />
+                        Report Defective / Wrong Product
+                      </button>
+                      <button
+                        onClick={() => router.push('/me?section=help')}
+                        className="w-full text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 font-medium text-slate-700 dark:text-slate-300 transition-colors"
+                      >
+                        Need help with this order?
+                      </button>
+                      <button
+                        onClick={() => router.push('/me?section=help')}
+                        className="w-full text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 font-medium text-slate-700 dark:text-slate-300 transition-colors"
+                      >
+                        Request Return or Exchange
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+          {order && (
+            <ReportDisputeModal
+              isOpen={isDisputeOpen}
+              onClose={() => setIsDisputeOpen(false)}
+              order={order}
+            />
+          )}
         </div>
       )}
     </>

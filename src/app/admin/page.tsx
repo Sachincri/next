@@ -2,7 +2,9 @@
 
 import { useMemo, useEffect } from "react"
 import dynamic from "next/dynamic"
-import { DollarSign, ShoppingCart, Package, Users, TrendingUp, Star, Wifi, WifiOff, CheckCircle, MessageSquareText } from "lucide-react"
+import { DollarSign, ShoppingCart, Package, Users, TrendingUp, Star, Wifi, WifiOff, CheckCircle, MessageSquareText, Trophy, Wallet, ArrowRight } from "lucide-react"
+import Link from "next/link";
+import { useGetAdminAffiliateOverviewQuery, useGetLeaderboardQuery } from "@/redux/api/shareApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -32,6 +34,10 @@ export default function HomePage() {
   const { data, isLoading: loading, error, refetch } = useGetAdminDashboardQuery()
   const { data: analyticsData } = useGetProductAnalyticsQuery()
   const { socket, isConnected, joinAdminRoom, leaveAdminRoom } = useSocket()
+  const { data: affiliateOverviewData } = useGetAdminAffiliateOverviewQuery();
+  const { data: leaderboardData } = useGetLeaderboardQuery({ limit: 3 });
+  const affOverview = affiliateOverviewData?.data;
+  const topLeaders = leaderboardData?.data?.leaderboard || [];
 
   // Join admin room on mount and listen for real-time updates
   useEffect(() => {
@@ -564,6 +570,102 @@ export default function HomePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Affiliate, Leaderboard & Wallet Control Section */}
+      <Card className="rounded-2xl border-indigo-200/50 dark:border-indigo-900/30 bg-gradient-to-br from-indigo-50/20 to-transparent dark:from-indigo-950/10 shadow-xs">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Trophy className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold">Affiliate & Leaderboard Program</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Referral sales commissions, customer wallet ledger & active prize contests
+              </p>
+            </div>
+          </div>
+
+          <Button size="sm" asChild className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 self-start sm:self-center">
+            <Link href="/admin/affiliates">
+              Manage Affiliates & Contests <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="p-3.5 rounded-xl bg-card border">
+              <span className="text-xs text-muted-foreground flex items-center justify-between">
+                Customer Wallets <Wallet className="w-3.5 h-3.5 text-indigo-500" />
+              </span>
+              <p className="text-xl font-bold text-foreground mt-1">{affOverview?.totalWallets || 0}</p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-card border">
+              <span className="text-xs text-muted-foreground flex items-center justify-between">
+                Commission Paid <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              </span>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                ₹{(affOverview?.totalCommissionPaid || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-card border">
+              <span className="text-xs text-muted-foreground flex items-center justify-between">
+                Pending Commissions <Users className="w-3.5 h-3.5 text-amber-500" />
+              </span>
+              <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+                ₹{(affOverview?.totalPendingCommission || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-3.5 rounded-xl bg-card border">
+              <span className="text-xs text-muted-foreground flex items-center justify-between">
+                Circulating Balance <Wallet className="w-3.5 h-3.5 text-purple-500" />
+              </span>
+              <p className="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                ₹{(affOverview?.totalCirculatingBalance || 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-amber-500" /> Top Performing Affiliate Partners (Leaderboard)
+              </span>
+              <Link href="/admin/affiliates" className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                View all wallets →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {topLeaders.length === 0 ? (
+                <div className="col-span-3 text-center py-4 text-xs text-muted-foreground">
+                  No affiliate leaderboard entries recorded yet.
+                </div>
+              ) : (
+                topLeaders.slice(0, 3).map((item: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-xl bg-card border flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        idx === 0 ? "bg-amber-400 text-amber-950 font-black" :
+                        idx === 1 ? "bg-slate-300 text-slate-900" :
+                        "bg-amber-600 text-white"
+                      }`}>
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs truncate max-w-[120px]">{item.userName || item.name || "Partner"}</p>
+                        <p className="text-[10px] text-muted-foreground">{item.totalOrders || 0} valid sales</p>
+                      </div>
+                    </div>
+                    <span className="font-extrabold text-xs text-indigo-600 dark:text-indigo-400">
+                      ₹{(item.totalEarnings || item.earnings || 0).toLocaleString()}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Enhanced Analytics Dashboard Section */}
       <div className="mt-8 min-w-0 w-full">

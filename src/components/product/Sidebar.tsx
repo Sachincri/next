@@ -27,6 +27,8 @@ const priceRanges = [
   [1000, 5000],
   [5000, 10000],
   [10000, 50000],
+  [50000, 100000],
+  [100000, 500000],
 ];
 const discounts = [10, 20, 30, 40, 50];
 const ratingsList = [4, 3, 2, 1];
@@ -48,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   clearBrandFilters,
 }) => {
   const displayMin = Array.isArray(price) && typeof price[0] === "number" ? price[0] : 0;
-  const displayMax = Array.isArray(price) && typeof price[1] === "number" ? price[1] : 100000;
+  const displayMax = Array.isArray(price) && typeof price[1] === "number" && price[1] < 10000000 ? price[1] : 500000;
 
   const { data: brands = [], isLoading: brandsLoading } = useGetAllBrandsQuery();
 
@@ -97,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const clearAllMobileFilters = () => {
-    setTempPrice([0, 100000]);
+    setTempPrice([0, 10000000]);
     setTempRatings(0);
     setTempDiscount(0);
     setTempBrand("");
@@ -229,7 +231,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Slider
                 defaultValue={price}
                 min={0}
-                max={100000}
+                max={500000}
                 step={500}
                 onValueChange={(val) => priceHandler(null, val)}
               />
@@ -332,7 +334,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Slider
                   defaultValue={tempPrice}
                   min={0}
-                  max={100000}
+                  max={500000}
                   step={500}
                   onValueChange={(val) => setTempPrice(val)}
                 />
@@ -349,7 +351,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       checked={tempPrice[0] === range[0] && tempPrice[1] === range[1]}
                       onChange={(e) => {
                         if (e.target.checked) setTempPrice(range);
-                        else setTempPrice([0, 100000]);
+                        else setTempPrice([0, 10000000]);
                       }}
                     />
                     <span className="text-sm text-gray-700 dark:text-slate-300">₹{range[0].toLocaleString()} – ₹{range[1].toLocaleString()}</span>

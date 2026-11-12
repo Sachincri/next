@@ -32,9 +32,10 @@ export function Footer() {
       title: 'Company',
       links: [
         { name: 'About Us', href: '/about' },
+        { name: 'Leaderboard', href: '/leaderboard' },
+        { name: 'Share & Earn', href: '/earn' },
         { name: 'Careers', href: '/careers' },
         { name: 'Press', href: '/press' },
-        { name: 'Sustainability', href: '/sustainability' },
       ],
     },
     {

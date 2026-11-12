@@ -81,6 +81,8 @@ export interface Product {
 
 export interface ProductCardProps extends Product {
   viewMode?: 'grid' | 'list';
+  badgeText?: string;
+  badgeColor?: string;
 }
 
 

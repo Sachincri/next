@@ -40,6 +40,10 @@ import {
   MessageSquare,
   Ticket,
   Megaphone,
+  BotMessageSquare,
+  ShieldAlert,
+  Wallet,
+  Trophy,
 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { BrainCircuit } from "lucide-react"
@@ -48,6 +52,7 @@ const NotificationsPopover = dynamic(() => import("./notifications-popover").the
 const AiAnalystDrawer = dynamic(() => import("./ai-analyst/AiAnalystDrawer"), { ssr: false })
 import { useAppSelector } from "@/redux/hooks"
 import { useLogoutMutation } from "@/redux/api/userApi"
+import { useGetProactiveAlertsQuery } from "@/redux/api/aiApi"
 import toast from "react-hot-toast"
 import {
   DropdownMenu,
@@ -68,6 +73,7 @@ const navigationGroups = [
     items: [
       { title: "Overview", href: "/admin", icon: LayoutDashboard },
       { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+      { title: "AI Chat Analytics", href: "/admin/rag-dashboard", icon: BotMessageSquare },
     ]
   },
   {
@@ -80,6 +86,8 @@ const navigationGroups = [
       { title: "Coupons", href: "/admin/coupons", icon: Ticket },
       { title: "Sales & Revenue", href: "/admin/sales", icon: TrendingUp },
       { title: "Issues", href: "/admin/issues", icon: MessageSquare },
+      { title: "AI Dispute Claims", href: "/admin/disputes", icon: ShieldAlert },
+      { title: "Manage Affiliates & Contests", href: "/admin/affiliates", icon: Trophy },
     ]
   },
   {
@@ -97,6 +105,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user } = useAppSelector((state) => state.user)
   const [isMounted, setIsMounted] = useState(false)
   const [isAnalystOpen, setIsAnalystOpen] = useState(false)
+  const { data: alertsData } = useGetProactiveAlertsQuery(undefined, { pollingInterval: 60000 })
+  const alertCount = alertsData?.data?.alertCount || 0
 
   useEffect(() => {
     setIsMounted(true)
@@ -203,17 +213,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Floating AI Analyst Button */}
         <button
           onClick={() => setIsAnalystOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-violet-500/30 active:scale-95"
-          title="AI Data Analyst"
+          className="fixed bottom-6 right-6 z-50 group flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-slate-950 font-black shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-emerald-500/40 active:scale-95"
+          title="Aura Intelligence"
         >
-          <BrainCircuit className="h-6 w-6 transition-transform duration-300 group-hover:rotate-12" />
-          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-green-500 ring-2 ring-[#0f0f1a]" />
-          </span>
+          <BrainCircuit className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-12" />
+          {alertCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-md ring-2 ring-[#0f0f1a]">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
+              <span className="relative">{alertCount}</span>
+            </span>
+          ) : (
+            <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-[#0f0f1a]" />
+            </span>
+          )}
           {/* Tooltip */}
           <span className="absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-            🧠 AI Analyst
+            🧠 Aura Intelligence {alertCount > 0 ? `(${alertCount} Alerts)` : "(Store Analyst)"}
           </span>
         </button>
 
@@ -229,34 +246,7 @@ function SidebarNavItems({ pathname }: { pathname: string }) {
 
   return (
     <>
-      {[
-        {
-          label: "Dashboard",
-          items: [
-            { title: "Overview", href: "/admin", icon: LayoutDashboard },
-            { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-          ]
-        },
-        {
-          label: "Management",
-          items: [
-            { title: "Orders", href: "/admin/orders", icon: ShoppingCart },
-            { title: "Products", href: "/admin/products", icon: Package },
-            { title: "Customers", href: "/admin/customers", icon: Users },
-            { title: "Smart Campaigns", href: "/admin/campaigns", icon: Megaphone },
-            { title: "Coupons", href: "/admin/coupons", icon: Ticket },
-            { title: "Sales & Revenue", href: "/admin/sales", icon: TrendingUp },
-            { title: "Issues", href: "/admin/issues", icon: MessageSquare },
-          ]
-        },
-        {
-          label: "System",
-          items: [
-            { title: "Home Content", href: "/admin/content", icon: FileText },
-            { title: "Settings", href: "/admin/settings", icon: Settings },
-          ]
-        }
-      ].map((listGroup) => (
+      {navigationGroups.map((listGroup) => (
         <SidebarGroup key={listGroup.label} className="mb-4">
           <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
             {listGroup.label}
@@ -264,7 +254,9 @@ function SidebarNavItems({ pathname }: { pathname: string }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {listGroup.items.map((navItem) => {
-                const isActive = pathname === navItem.href
+                const isActive = navItem.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname === navItem.href || pathname.startsWith(navItem.href + "/")
                 return (
                   <SidebarMenuItem key={navItem.href}>
                     <SidebarMenuButton

@@ -3,6 +3,9 @@ import { Providers } from './providers';
 import { Toaster } from 'react-hot-toast';
 import { Outfit } from 'next/font/google';
 import './globals.css';
+import { ChatBot } from '@/components/ai/ChatBot';
+import { DynamicFavicon } from '@/components/common/DynamicFavicon';
+import Script from 'next/script';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -18,7 +21,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export const metadata: Metadata = {
+const DEFAULT_METADATA = {
   title: {
     default: 'E-Commerce Store | Best Deals & Products',
     template: '%s | E-Commerce Store',
@@ -35,7 +38,7 @@ export const metadata: Metadata = {
     siteName: 'E-Commerce Store',
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary_large_image' as const,
     title: 'E-Commerce Store',
     description: 'Shop the latest trends at unbeatable prices.',
   },
@@ -43,21 +46,86 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  icons: {
+    icon: [
+      { url: '/icon.svg?v=2', type: 'image/svg+xml' },
+      { url: '/favicon.ico?v=2' },
+    ],
+    shortcut: '/icon.svg?v=2',
+    apple: '/apple-icon.png?v=2',
+  },
 };
 
-import { ChatBot } from '@/components/ai/ChatBot';
-import Script from 'next/script';
+/**
+ * Enterprise SSR Dynamic Metadata:
+ * Fetches the active store configuration (logo & store branding) on the server.
+ * Ensures initial HTML & SEO web crawlers receive the exact dynamic store logo in <link rel="icon">.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const rawServerUrl = (process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000/api/v1').trim();
+    const res = await fetch(`${rawServerUrl}/home`, {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(2500),
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const homeData = json?.setHomePageData || json?.data;
+      const logoUrl = typeof homeData?.headerLogo === 'object'
+        ? homeData?.headerLogo?.url
+        : homeData?.headerLogo;
+      const siteName = homeData?.pageName || homeData?.metaTitle || 'E-Commerce Store';
+      const description = homeData?.metaDescription || DEFAULT_METADATA.description;
+
+      if (logoUrl && typeof logoUrl === 'string') {
+        const isSvg = logoUrl.toLowerCase().endsWith('.svg');
+        const iconType = isSvg ? 'image/svg+xml' : 'image/png';
+
+        return {
+          ...DEFAULT_METADATA,
+          title: {
+            default: `${siteName} | Best Deals & Products`,
+            template: `%s | ${siteName}`,
+          },
+          description,
+          icons: {
+            icon: [
+              { url: logoUrl, type: iconType },
+              { url: '/icon.svg?v=2', type: 'image/svg+xml' },
+              { url: '/favicon.ico?v=2' },
+            ],
+            shortcut: logoUrl,
+            apple: [
+              { url: logoUrl },
+              { url: '/apple-icon.png?v=2' },
+            ],
+          },
+          openGraph: {
+            ...DEFAULT_METADATA.openGraph,
+            siteName,
+            images: [{ url: logoUrl }],
+          },
+        };
+      }
+    }
+  } catch {
+    // Graceful fallback during offline build, cold start, or network delay
+  }
+
+  return DEFAULT_METADATA;
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-
   return (
     <html lang="en" className={outfit.variable} suppressHydrationWarning>
       <body className={`min-h-screen w-full bg-background text-foreground overflow-x-hidden font-sans antialiased`}>
         <Providers>
+          <DynamicFavicon />
           {children}
           <ChatBot />
           <Toaster
