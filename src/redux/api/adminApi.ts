@@ -203,6 +203,42 @@ export const adminApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ["Admin", "Home"],
         }),
+        updateCoupon: builder.mutation<any, { id: string; data: Record<string, any> }>({
+            query: ({ id, data }) => ({
+                url: `/coupons/${id}`,
+                method: "PATCH",
+                body: data,
+            }),
+            async onQueryStarted({ id, data }, { dispatch, queryFulfilled }) {
+                const patchResult = dispatch(
+                    adminApi.util.updateQueryData("getCoupons", undefined, (draft: any[]) => {
+                        if (!Array.isArray(draft)) return;
+                        const target = draft.find((c) => c._id === id);
+                        if (target) {
+                            Object.assign(target, data);
+                        }
+                    })
+                );
+                try {
+                    const { data: response } = await queryFulfilled;
+                    const updatedCoupon = response?.data;
+                    if (updatedCoupon?._id) {
+                        dispatch(
+                            adminApi.util.updateQueryData("getCoupons", undefined, (draft: any[]) => {
+                                if (!Array.isArray(draft)) return;
+                                const idx = draft.findIndex((c) => c._id === id);
+                                if (idx !== -1) {
+                                    draft[idx] = updatedCoupon;
+                                }
+                            })
+                        );
+                    }
+                } catch {
+                    patchResult.undo();
+                }
+            },
+            invalidatesTags: ["Admin", "Home"],
+        }),
         deleteCoupon: builder.mutation<any, string>({
             query: (id) => ({
                 url: `/coupons/${id}`,
@@ -428,6 +464,7 @@ export const {
     useGenerateProductDetailsMutation,
     useGetCouponsQuery,
     useCreateCouponMutation,
+    useUpdateCouponMutation,
     useDeleteCouponMutation,
     useAssignCouponMutation,
     useValidateCouponMutation,
