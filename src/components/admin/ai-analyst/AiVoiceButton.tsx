@@ -57,6 +57,8 @@ export default function AiVoiceButton({ onTranscript, disabled }: AiVoiceButtonP
 
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
           toast.error("Microphone access was denied. Please allow microphone access in your browser settings.")
+        } else if (event.error === "audio-capture") {
+          toast.error("No microphone detected. Please connect a microphone and try again.")
         } else if (event.error !== "no-speech" && event.error !== "aborted") {
           toast.error("Voice input error. Please try again or type your question.")
         }
@@ -120,8 +122,8 @@ export default function AiVoiceButton({ onTranscript, disabled }: AiVoiceButtonP
     <div className="relative flex items-center">
       {/* Interim text preview */}
       {interimText && (
-        <div className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-gray-800/95 px-3 py-1.5 text-xs text-gray-300 shadow-xl backdrop-blur-sm">
-          <Loader2 className="mr-1.5 inline h-3 w-3 animate-spin" />
+        <div className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-lg">
+          <Loader2 className="mr-1.5 inline h-3 w-3 animate-spin text-indigo-600" />
           {interimText}
         </div>
       )}
@@ -131,12 +133,12 @@ export default function AiVoiceButton({ onTranscript, disabled }: AiVoiceButtonP
         onClick={toggleListening}
         disabled={disabled}
         className={`
-          group relative flex h-9 w-9 items-center justify-center rounded-full
-          transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
+          group relative flex h-9 w-9 items-center justify-center rounded-lg
+          transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
           ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}
           ${isListening
-            ? "bg-red-500/20 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
-            : "bg-white/[0.06] text-gray-400 hover:bg-indigo-500/20 hover:text-indigo-400"
+            ? "bg-rose-50 text-rose-600 border border-rose-200"
+            : "text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"
           }
         `}
         title={isListening ? "Stop listening" : "Voice input"}

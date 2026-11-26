@@ -5,7 +5,7 @@ import { Badge } from "@/ui/badge"
 import { Button } from "@/ui/button"
 import { Separator } from "@/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
-import { Package, Tag, Layers, Info, DollarSign, Palette, Check, X } from "lucide-react"
+import { Package, Tag, Layers, Info, DollarSign, Palette, Check, X, Play, Video } from "lucide-react"
 import { Product } from "@/types"
 
 interface ProductDetailModalProps {
@@ -27,7 +27,7 @@ export default function ProductDetailModal({ product, open, onOpenChange }: Prod
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[92vw] w-[92vw] lg:max-w-5xl xl:max-w-6xl max-h-[92vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl">
                         Product Details
@@ -54,6 +54,17 @@ export default function ProductDetailModal({ product, open, onOpenChange }: Prod
                                 {product.images?.slice(1).map((img: any, i: number) => (
                                     <div key={i} className="aspect-square rounded-md overflow-hidden border bg-gray-50">
                                         <img src={img.url} alt={`Preview ${i}`} className="w-full h-full object-contain" />
+                                    </div>
+                                ))}
+                                {((product as any).videos || []).map((vid: any, i: number) => (
+                                    <div key={`vid-${i}`} className="aspect-square rounded-md overflow-hidden border bg-slate-950 relative flex items-center justify-center group cursor-pointer">
+                                        <video src={vid.url} className="w-full h-full object-cover opacity-60" muted />
+                                        <div className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center text-white shadow">
+                                            <Play className="w-3 h-3 fill-white ml-0.5" />
+                                        </div>
+                                        <span className="absolute bottom-1 text-[8px] font-black uppercase text-white bg-black/70 px-1 rounded">
+                                            VIDEO
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -106,6 +117,10 @@ export default function ProductDetailModal({ product, open, onOpenChange }: Prod
                                 <div className="flex justify-between border-b pb-2">
                                     <span className="font-medium flex items-center gap-2"><Info className="w-4 h-4" /> Warranty</span>
                                     <span>{product.warranty || "N/A"}</span>
+                                </div>
+                                <div className="flex justify-between border-b pb-2">
+                                    <span className="font-medium flex items-center gap-2"><Tag className="w-4 h-4" /> HSN / SAC Code</span>
+                                    <span className="font-mono font-medium">{(product as any).hsnCode || "Default (Store Default)"}</span>
                                 </div>
                             </div>
                         </div>

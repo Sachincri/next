@@ -74,18 +74,37 @@ export const ProductInfoServer: React.FC<ProductInfoServerProps> = ({
 
             {/* Highlights */}
             {product.highlights && product.highlights.length > 0 && (
-                <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-5 border border-blue-100 dark:border-blue-900/30">
-                    <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-3 text-sm flex items-center gap-2">
-                        <Star className="w-4 h-4 text-blue-600 dark:text-blue-400 fill-current" />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100 tracking-tight mb-3">
                         Highlights
                     </h3>
-                    <ul className="space-y-2">
-                        {product.highlights.map((h: string) => (
-                            <li key={h} className="flex items-start gap-2 text-xs text-gray-700 dark:text-slate-300">
-                                <div className="w-1 h-1 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />
-                                <span>{h}</span>
-                            </li>
-                        ))}
+                    <ul className="space-y-2.5">
+                        {product.highlights.map((h: string, idx: number) => {
+                            const colonIndex = h.indexOf(":");
+                            const hasKeyValue = colonIndex > 0 && colonIndex < 28;
+                            const keyPart = hasKeyValue ? h.substring(0, colonIndex).trim() : null;
+                            const valPart = hasKeyValue ? h.substring(colonIndex + 1).trim() : null;
+
+                            return (
+                                <li key={idx} className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-slate-300">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500 dark:bg-slate-400 mt-1.5 shrink-0" />
+                                    <div className="leading-relaxed flex-1">
+                                        {hasKeyValue ? (
+                                            <>
+                                                <span className="font-semibold text-gray-900 dark:text-slate-100 mr-1.5">
+                                                    {keyPart}:
+                                                </span>
+                                                <span className="text-gray-600 dark:text-slate-300">
+                                                    {valPart}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <span>{h}</span>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
             )}

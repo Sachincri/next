@@ -24,14 +24,14 @@ async function getProduct(id: string) {
   }
 }
 
-async function getSimilarProducts(categoryId: string) {
+async function fetchProductList(queryString: string) {
   try {
-    const res = await fetch(`${BASE_URL}/products?category=${categoryId}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${BASE_URL}/products?${queryString}`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const data = await res.json();
     return data?.products || data?.data?.products || [];
   } catch (error) {
-    console.error("Failed to fetch similar products:", error);
+    console.error("Failed to fetch related products:", error);
     return [];
   }
 }
@@ -89,9 +89,15 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
   }
 
   const categoryId = typeof product.category === 'object' ? product.category?._id : product.category;
+  const categoryName = typeof product.category === 'object' ? product.category?.name : undefined;
   const currentBrandId = typeof product.brand === 'object' ? product.brand?._id : product.brand;
+  const currentBrandName = typeof product.brand === 'object' ? product.brand?.name : undefined;
 
-  const similarProducts = await getSimilarProducts(categoryId);
+  const [similarProducts, brandProducts, catalogProducts] = await Promise.all([
+    categoryId ? fetchProductList(`category=${encodeURIComponent(categoryId)}&limit=14`) : Promise.resolve([]),
+    currentBrandId ? fetchProductList(`brand=${encodeURIComponent(currentBrandId)}&limit=14`) : Promise.resolve([]),
+    fetchProductList('limit=16'),
+  ]);
 
   const breadcrumbLinks = [
     { label: "Home", url: "/" },
@@ -180,8 +186,12 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
               averageRating={product.ratings?.average || 0}
               ratingCount={product.ratings?.count || 0}
               categoryId={categoryId}
+              categoryName={categoryName}
               currentBrandId={currentBrandId}
+              currentBrandName={currentBrandName}
               similarProducts={similarProducts}
+              brandProducts={brandProducts}
+              catalogProducts={catalogProducts}
             />
           </div>
         </main>

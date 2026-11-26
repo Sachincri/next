@@ -1,48 +1,54 @@
 "use client";
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useGetHomePageDataQuery } from '@/redux/api/homeApi';
+import { getFaviconMimeType, optimizeFaviconUrl } from '@/lib/seo-utils';
 
 export function DynamicFavicon() {
+  const pathname = usePathname();
   const { data: homeData } = useGetHomePageDataQuery();
-
-  const logoUrl = typeof homeData?.headerLogo === 'object'
-    ? homeData?.headerLogo?.url
-    : homeData?.headerLogo;
+  const faviconUrl = optimizeFaviconUrl(homeData?.headerLogo);
 
   useEffect(() => {
-    // If admin has set a dynamic logo in CMS, use it; otherwise use branded store icon with cache-busting
-    const targetUrl = logoUrl || '/icon.svg?v=2';
+    // Do NOT overwrite SSR <link rel="icon"> tags while homeData is still loading
+    // or if no custom CMS logo is configured.
+    if (!faviconUrl) return;
 
-    const updateIconLink = (rel: string, href: string) => {
+    const mimeType = getFaviconMimeType(faviconUrl);
+
+    const updateIconLink = (rel: string) => {
       const links = document.querySelectorAll<HTMLLinkElement>(`link[rel="${rel}"]`);
       if (links.length > 0) {
         links.forEach((link) => {
-          if (link.href !== href) {
-            link.href = href;
+          if (link.getAttribute('href') !== faviconUrl) {
+            link.href = faviconUrl;
+          }
+          if (rel === 'apple-touch-icon') {
+            if (link.hasAttribute('type')) link.removeAttribute('type');
+          } else if (link.getAttribute('type') !== mimeType) {
+            link.type = mimeType;
           }
         });
       } else {
         const link = document.createElement('link');
         link.rel = rel;
-        link.href = href;
-        if (href.endsWith('.svg') || href.includes('.svg?')) {
-          link.type = 'image/svg+xml';
-        } else if (href.endsWith('.png')) {
-          link.type = 'image/png';
+        link.href = faviconUrl;
+        if (rel !== 'apple-touch-icon') {
+          link.type = mimeType;
         }
         document.head.appendChild(link);
       }
     };
 
     try {
-      updateIconLink('icon', targetUrl);
-      updateIconLink('shortcut icon', targetUrl);
-      updateIconLink('apple-touch-icon', targetUrl);
+      updateIconLink('icon');
+      updateIconLink('shortcut icon');
+      updateIconLink('apple-touch-icon');
     } catch (err) {
       console.warn('[DynamicFavicon] Error updating favicon:', err);
     }
-  }, [logoUrl]);
+  }, [faviconUrl, pathname]);
 
   return null;
 }

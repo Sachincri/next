@@ -2,7 +2,7 @@
 import React from 'react';
 import { useGetCartSummaryQuery, useApplyCouponMutation, useRemoveCouponMutation, useToggleCoinsMutation } from '@/redux/api/cartApi';
 import { useAppSelector } from '@/redux/hooks';
-import { useGetAppSettingsQuery } from '@/redux/api/adminApi';
+import { useGetPublicSettingsQuery } from '@/redux/api/homeApi';
 import { Coins, HelpCircle, Loader2, Tag, X } from 'lucide-react';
 import { Switch } from '@/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ interface PriceSummaryProps {
 export default function PriceSummary({ showCouponInput = true, showCoinToggle = true }: PriceSummaryProps) {
   const { user, isAuthenticated } = useAppSelector((state: RootState) => state.user);
   const { data: summary, isLoading: isSummaryLoading } = useGetCartSummaryQuery();
-  const { data: settings } = useGetAppSettingsQuery();
+  const { data: settings } = useGetPublicSettingsQuery();
 
   const [applyCoupon, { isLoading: isApplyingCoupon }] = useApplyCouponMutation();
   const [removeCoupon, { isLoading: isRemovingCoupon }] = useRemoveCouponMutation();
@@ -233,11 +233,24 @@ export default function PriceSummary({ showCouponInput = true, showCoinToggle = 
           </div>
         )}
 
+        {/* GST Breakdown for Exclusive Tax Mode */}
+        {(priceDetails as any)?.taxPricingMode === 'exclusive' && ((priceDetails as any)?.taxAmount > 0) && (
+          <div className="flex justify-between text-gray-600 dark:text-slate-400">
+            <span>Estimated GST</span>
+            <span className="text-gray-900 dark:text-slate-100 font-medium">₹{((priceDetails as any).taxAmount).toLocaleString()}</span>
+          </div>
+        )}
+
         <div className="pt-4 border-t border-gray-200 dark:border-slate-800">
           <div className="flex justify-between items-center text-lg">
             <span className="font-bold text-gray-900 dark:text-slate-100">Total Amount</span>
             <span className="font-black text-gray-900 dark:text-slate-100">₹{totalAmount.toLocaleString()}</span>
           </div>
+          {(priceDetails as any)?.taxPricingMode !== 'exclusive' && ((priceDetails as any)?.gstIncluded > 0) && (
+            <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1 text-right">
+              Inclusive of GST ₹{((priceDetails as any).gstIncluded).toLocaleString()}
+            </p>
+          )}
         </div>
 
         {totalSavings > 0 && (

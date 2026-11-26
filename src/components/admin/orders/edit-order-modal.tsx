@@ -20,14 +20,14 @@ export default function EditOrderModal({ order, open, onOpenChange }: EditOrderM
     const [updateOrder, { isLoading }] = useUpdateOrderMutation()
 
     const [formData, setFormData] = useState({
-        status: "placed",
+        status: "Ordered",
         // Add other editable fields if API supports them, currently API only supports status update in updateOrder
     })
 
     useEffect(() => {
         if (order) {
             setFormData({
-                status: order.orderStatus || "placed",
+                status: order.orderStatus || "Ordered",
             })
         }
     }, [order])
@@ -70,11 +70,11 @@ export default function EditOrderModal({ order, open, onOpenChange }: EditOrderM
                                 <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="placed">Placed</SelectItem>
-                                <SelectItem value="processing">Processing</SelectItem>
-                                <SelectItem value="shipped">Shipped</SelectItem>
-                                <SelectItem value="delivered">Delivered</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                <SelectItem value="Ordered">Ordered</SelectItem>
+                                <SelectItem value="Processing">Processing</SelectItem>
+                                <SelectItem value="Shipped">Shipped</SelectItem>
+                                <SelectItem value="Delivered">Delivered</SelectItem>
+                                <SelectItem value="Cancelled">Cancelled</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

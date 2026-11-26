@@ -3,7 +3,7 @@ import { apiSlice } from "./apiSlice";
 export const shareApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // Share Link endpoints
-    createShareLink: builder.mutation<any, { productId?: string; customCode?: string }>({
+    createShareLink: builder.mutation<any, { productId?: string; customCode?: string; type?: "product" | "store" }>({
       query: (body) => ({
         url: "/share/link",
         method: "POST",
@@ -146,7 +146,7 @@ export const shareApi = apiSlice.injectEndpoints({
       invalidatesTags: ["Admin", "Wallet"],
     }),
 
-    adminWalletAdjust: builder.mutation<any, { userId: string; type: "credit" | "debit"; amount: number; description: string }>({
+    adminWalletAdjust: builder.mutation<any, { userId: string; type: "credit" | "debit" | "admin_credit" | "admin_debit"; amount: number; description: string }>({
       query: ({ userId, ...body }) => ({
         url: `/share/admin/wallet/${userId}/adjust`,
         method: "POST",

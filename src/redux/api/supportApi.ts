@@ -29,6 +29,25 @@ export const supportApi = apiSlice.injectEndpoints({
                 method: "PATCH",
                 body,
             }),
+            async onQueryStarted({ id, status, priority }, { dispatch, queryFulfilled }) {
+                const patchAll = dispatch(
+                    supportApi.util.updateQueryData("getAllSupportRequests", undefined, (draft: any) => {
+                        const list = draft?.data?.requests;
+                        if (Array.isArray(list)) {
+                            const target = list.find((item: any) => item._id === id);
+                            if (target) {
+                                if (status) target.status = status;
+                                if (priority) target.priority = priority;
+                            }
+                        }
+                    })
+                );
+                try {
+                    await queryFulfilled;
+                } catch {
+                    patchAll.undo();
+                }
+            },
             invalidatesTags: ["Admin", "Support"],
         }),
         replyToSupportRequest: builder.mutation<any, { id: string; message: string; status?: string }>({

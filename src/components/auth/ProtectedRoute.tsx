@@ -31,11 +31,11 @@ export function ProtectedRoute({
   }, [isAuthenticated, adminRoute, isAdmin, loading, router, redirect]);
 
   if (loading) {
-    return <Loader />;
+    return <Loader fullScreen size="lg" />;
   }
 
   if (!isAuthenticated || (adminRoute && !isAdmin)) {
-    return <Loader />;
+    return <Loader fullScreen size="lg" />;
   }
 
   return <>{children}</>;

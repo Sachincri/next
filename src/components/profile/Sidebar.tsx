@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { User, ActiveSection, UserProfile } from "@/types";
-import { Gift, HelpCircle, LogOut, Mail, MapPin, Package, Phone, Star, Trophy, User as UserIcon, Wallet } from "lucide-react";
+import { Gift, HelpCircle, LogOut, Mail, MapPin, Package, Phone, ShieldCheck, Star, Trophy, User as UserIcon, Wallet } from "lucide-react";
 
 
 interface SidebarProps {
@@ -31,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeSection, onChange,
     { id: 'rewards', icon: Gift, label: 'My Rewards', },
     { id: 'reviews', icon: Star, label: 'My Reviews & Ratings', },
     { id: 'affiliate', icon: Trophy, label: 'Affiliate & Leaderboard', },
+    { id: 'privacy', icon: ShieldCheck, label: 'Privacy & Data', },
     { id: 'help', icon: HelpCircle, label: 'Help & Support', }
   ];
 

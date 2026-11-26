@@ -46,8 +46,10 @@ export interface Product {
   thumbnail?: ProductImage;
   videos?: ProductImage[];
   warranty: string;
-  category: string | Category;
-  brand?: string | Brand;
+  hsnCode?: string;
+  homeDisplaySection?: string;
+  category?: string | Category | null;
+  brand?: string | Brand | null;
   stock: number;
   discount: number;
   numOfReviews: number;
@@ -89,6 +91,7 @@ export interface ProductCardProps extends Product {
 export interface ProductSliderProps {
   heading?: string;
   products: Product[];
+  viewAllHref?: string;
 }
 
 export interface ViewedProduct {

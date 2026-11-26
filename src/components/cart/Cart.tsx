@@ -2,10 +2,11 @@
 import { useAppDispatch, useAppSelector } from '@/redux';
 import { useGetCartQuery, useSyncCartMutation, } from '@/redux/api/cartApi';
 import { useGetAddressesQuery } from '@/redux/api/addressApi';
-import { emptyState } from '@/redux/reducer/cartReducer';
+import { emptyState, addShippingInfo } from '@/redux/reducer/cartReducer';
 import { RootState } from '@/redux/store';
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { CartItemCard } from './CartItemCard';
 import PriceSummary from './PriceSummary';
 import { Shield, MapPin, ShoppingBag } from 'lucide-react';
@@ -16,7 +17,7 @@ import { Button } from '@/ui/button';
 const Cart: React.FC = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { isAuthenticated } = useAppSelector((state: RootState) => state.user);
+  const { isAuthenticated, user } = useAppSelector((state: RootState) => state.user);
   const { cartItems: localCartItems } = useAppSelector((state: RootState) => state.cart);
 
   // RTK Query hooks
@@ -46,7 +47,26 @@ const Cart: React.FC = () => {
   }, [isAuthenticated, localCartItems, syncCart, dispatch]);
 
   const checkoutHandler = () => {
-    if (addresses && addresses.length > 0) {
+    if (!isAuthenticated) {
+      toast.error('Please login to proceed with checkout');
+      router.push('/login?redirect=/cart');
+      return;
+    }
+    const addressList = Array.isArray(addresses) ? addresses : (addresses as any)?.data || [];
+    if (addressList && addressList.length > 0) {
+      const defaultAddr = addressList.find((a: any) => a.isDefault) || addressList[0];
+      dispatch(addShippingInfo({
+        name: defaultAddr.name || user?.name || '',
+        firstName: (defaultAddr.name || user?.name || 'Customer').split(' ')[0],
+        lastName: (defaultAddr.name || '').split(' ').slice(1).join(' ') || '',
+        email: user?.email || '',
+        address: defaultAddr.address,
+        city: defaultAddr.city,
+        state: defaultAddr.state,
+        country: defaultAddr.country || 'India',
+        pinCode: Number(defaultAddr.pinCode),
+        phoneNo: Number(defaultAddr.phoneNo),
+      } as any));
       router.push('/order-summary');
     } else {
       router.push('/shipping');

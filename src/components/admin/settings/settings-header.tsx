@@ -5,10 +5,11 @@ import { Save, RefreshCw, Loader2 } from "lucide-react"
 
 interface SettingsHeaderProps {
   onSave?: () => void;
+  onReset?: () => void;
   isUpdating?: boolean;
 }
 
-export default function SettingsHeader({ onSave, isUpdating }: SettingsHeaderProps) {
+export default function SettingsHeader({ onSave, onReset, isUpdating }: SettingsHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
@@ -17,7 +18,7 @@ export default function SettingsHeader({ onSave, isUpdating }: SettingsHeaderPro
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={onReset} disabled={isUpdating}>
           <RefreshCw className="w-4 h-4 mr-2" />
           Reset to Defaults
         </Button>

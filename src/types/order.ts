@@ -10,6 +10,8 @@ export interface Order {
         id: string;
         status: string;
         method: string;
+        advanceAmount?: number;
+        dueAmount?: number;
     };
     paidAt: string;
     itemsPrice: number;
@@ -17,6 +19,12 @@ export interface Order {
     shippingPrice: number;
     totalPrice: number;
     redeemCoins: number;
+    referralCode?: string;
+    referredBy?: { _id: string; name: string; email?: string; phone?: string };
+    referralCommissionPaid?: boolean;
+    isPartialCod?: boolean;
+    advancePayment?: number;
+    remainingBalance?: number;
     coupon?: {
         code: string;
         discount: number;

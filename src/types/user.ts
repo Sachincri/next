@@ -21,6 +21,16 @@ export interface Reward {
     type: 'cashback' | 'discount' | 'freebie';
 }
 
+export interface UserConsentPreferences {
+    analytics?: boolean;
+    marketing?: boolean;
+    emailMarketing?: boolean;
+    whatsappMarketing?: boolean;
+    privacyNoticeAccepted?: boolean;
+    privacyPolicyVersion?: string;
+    updatedAt?: string;
+}
+
 export interface User {
     _id: string;
     name: string;
@@ -34,6 +44,8 @@ export interface User {
     };
     address: ShippingInfo[];
     role: "admin" | "user";
+    consentPreferences?: UserConsentPreferences;
+    isAnonymized?: boolean;
     createdAt: string;
     updatedAt: string;
     purchasedAmount?: number;

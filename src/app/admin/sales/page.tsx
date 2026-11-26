@@ -1,4 +1,5 @@
 "use client"
+import { Suspense } from "react"
 import dynamic from "next/dynamic"
 import SalesHeader from "@/components/admin/sales/sales-header"
 import SalesSummaryCards from "@/components/admin/sales/sales-summary-cards"
@@ -9,6 +10,7 @@ const TransactionsTable = dynamic(() => import("@/components/admin/sales/transac
 
 export default function SalesPage() {
   return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading sales analytics...</div>}>
       <div className="space-y-6">
         <SalesHeader />
         <SalesSummaryCards />
@@ -20,5 +22,6 @@ export default function SalesPage() {
           <TransactionsTable />
         </div>
       </div>
+    </Suspense>
   )
 }

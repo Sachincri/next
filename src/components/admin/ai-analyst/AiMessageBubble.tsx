@@ -9,7 +9,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Sparkles,
   Lightbulb,
 } from "lucide-react"
 import { useState, useCallback } from "react"
@@ -90,10 +89,10 @@ export default function AiMessageBubble({ message }: { message: MessageData }) {
     <div className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar Icon */}
       <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-md ${
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl shadow-xs ${
           isUser
-            ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 font-bold"
-            : "bg-gradient-to-br from-violet-600 to-indigo-600 text-white"
+            ? "bg-indigo-600 text-white"
+            : "bg-indigo-50 border border-indigo-100 text-indigo-600"
         }`}
       >
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
@@ -101,39 +100,15 @@ export default function AiMessageBubble({ message }: { message: MessageData }) {
 
       {/* Bubble Container */}
       <div
-        className={`max-w-[92%] sm:max-w-[85%] space-y-3 rounded-2xl px-4 py-3 shadow-md ${
+        className={`max-w-[92%] sm:max-w-[85%] space-y-2.5 rounded-2xl px-4 py-3 shadow-xs ${
           isUser
-            ? "rounded-br-md bg-emerald-600 text-white font-medium text-sm leading-relaxed"
-            : "rounded-bl-md border border-white/[0.08] bg-gray-900/90 text-gray-100"
+            ? "rounded-br-sm bg-indigo-600 text-white font-medium text-sm leading-relaxed"
+            : "rounded-bl-sm border border-slate-200 bg-slate-50 text-slate-800"
         }`}
       >
-        {/* Header / Spoken Response Bar (AI Only) */}
-        {!isUser && (
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-2 text-xs text-gray-400">
-            <span className="font-bold text-emerald-400 flex items-center gap-1.5 text-[11px] tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5" /> Aura Intelligence
-            </span>
-
-            {speechText && (
-              <button
-                onClick={speak}
-                title={isSpeaking ? "Mute audio brief" : "Listen to audio brief"}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors ${
-                  isSpeaking
-                    ? "bg-emerald-500/20 text-emerald-300 animate-pulse border border-emerald-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/[0.06]"
-                }`}
-              >
-                {isSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                <span>{isSpeaking ? "Mute" : "Audio Brief"}</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* 1. KPI Cards Grid (Rendered above analysis if available) */}
+        {/* 1. KPI Cards Grid */}
         {!isUser && hasKpis && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {message.kpiCards!.map((kpi, kIdx) => {
               const isUp = kpi.trend === "up" || (kpi.changePercent && kpi.changePercent > 0)
               const isDown = kpi.trend === "down" || (kpi.changePercent && kpi.changePercent < 0)
@@ -141,26 +116,26 @@ export default function AiMessageBubble({ message }: { message: MessageData }) {
               return (
                 <div
                   key={kIdx}
-                  className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 transition-all hover:border-emerald-500/30 shadow-sm"
+                  className="rounded-xl border border-slate-200 bg-white p-2.5 transition-colors hover:border-indigo-300"
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 truncate">
+                  <p className="text-[11px] font-medium text-slate-500 truncate">
                     {kpi.label}
                   </p>
-                  <p className="text-base font-extrabold text-white mt-0.5 tracking-tight">
+                  <p className="text-base font-bold text-slate-900 mt-0.5 tracking-tight">
                     {kpi.value}
                   </p>
                   {kpi.changePercent !== undefined && (
                     <div className="flex items-center gap-1 mt-1">
                       {isUp ? (
-                        <TrendingUp className="w-3 h-3 text-emerald-400" />
+                        <TrendingUp className="w-3 h-3 text-emerald-600" />
                       ) : isDown ? (
-                        <TrendingDown className="w-3 h-3 text-rose-400" />
+                        <TrendingDown className="w-3 h-3 text-rose-600" />
                       ) : (
-                        <Minus className="w-3 h-3 text-gray-400" />
+                        <Minus className="w-3 h-3 text-slate-400" />
                       )}
                       <span
-                        className={`text-[10px] font-bold ${
-                          isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-gray-400"
+                        className={`text-[11px] font-semibold ${
+                          isUp ? "text-emerald-600" : isDown ? "text-rose-600" : "text-slate-500"
                         }`}
                       >
                         {kpi.changePercent > 0 ? "+" : ""}
@@ -174,29 +149,33 @@ export default function AiMessageBubble({ message }: { message: MessageData }) {
           </div>
         )}
 
-        {/* 2. Detailed Markdown Analysis / User Question */}
-        <div className="prose prose-invert prose-xs sm:prose-sm max-w-none text-xs sm:text-sm leading-relaxed text-gray-200">
+        {/* 2. Markdown Analysis / User Message */}
+        <div
+          className={`prose prose-xs sm:prose-sm max-w-none text-xs sm:text-sm leading-relaxed ${
+            isUser ? "text-white" : "text-slate-800"
+          }`}
+        >
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
             <ReactMarkdown
               components={{
                 h2: ({ children }) => (
-                  <h2 className="text-sm font-bold text-emerald-300 mt-3 mb-1.5 flex items-center gap-1.5">
+                  <h2 className="text-sm font-semibold text-slate-900 mt-3 mb-1.5">
                     {children}
                   </h2>
                 ),
                 h3: ({ children }) => (
-                  <h3 className="text-xs font-bold text-white mt-2 mb-1">{children}</h3>
+                  <h3 className="text-xs font-semibold text-slate-900 mt-2 mb-1">{children}</h3>
                 ),
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                 ul: ({ children }) => <ul className="list-disc pl-4 space-y-1 mb-2">{children}</ul>,
-                li: ({ children }) => <li className="text-gray-300">{children}</li>,
+                li: ({ children }) => <li className="text-slate-700">{children}</li>,
                 strong: ({ children }) => (
-                  <strong className="text-white font-semibold">{children}</strong>
+                  <strong className="text-slate-900 font-semibold">{children}</strong>
                 ),
                 code: ({ children }) => (
-                  <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] font-mono text-emerald-300">
+                  <code className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[11px] font-mono text-indigo-700">
                     {children}
                   </code>
                 ),
@@ -209,37 +188,37 @@ export default function AiMessageBubble({ message }: { message: MessageData }) {
 
         {/* 3. Dynamic Recharts Chart */}
         {!isUser && hasChart && (
-          <div className="pt-2">
+          <div className="pt-1">
             <AiDynamicChart chart={message.chartConfig || message.chart} />
           </div>
         )}
 
-        {/* 4. Table Fallback */}
+        {/* 4. Data Table */}
         {!isUser && message.table && (
-          <div className="pt-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 mb-2">
-              <Table2 className="w-3.5 h-3.5" />
+          <div className="pt-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900 mb-2">
+              <Table2 className="w-3.5 h-3.5 text-indigo-600" />
               <span>{message.table.title}</span>
             </div>
-            <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-white/[0.02]">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-white/[0.08] bg-white/[0.04]">
+                  <tr className="border-b border-slate-200 bg-slate-100/80">
                     {message.table.headers.map((h, hIdx) => (
                       <th
                         key={hIdx}
-                        className="px-3 py-2 font-bold uppercase tracking-wider text-gray-400 text-[10px]"
+                        className="px-3 py-2 font-semibold uppercase tracking-wider text-slate-600 text-[10px]"
                       >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-slate-100">
                   {message.table.rows.map((row, rowIdx) => (
-                    <tr key={rowIdx} className="hover:bg-white/[0.02] transition-colors">
+                    <tr key={rowIdx} className="hover:bg-slate-50 transition-colors">
                       {row.map((cell, cellIdx) => (
-                        <td key={cellIdx} className="whitespace-nowrap px-3 py-2 text-gray-300 font-medium">
+                        <td key={cellIdx} className="whitespace-nowrap px-3 py-2 text-slate-700 font-medium">
                           {cell}
                         </td>
                       ))}
@@ -251,34 +230,49 @@ export default function AiMessageBubble({ message }: { message: MessageData }) {
           </div>
         )}
 
-        {/* 5. Actionable Insights & Recommendations */}
+        {/* 5. Recommendations */}
         {!isUser && hasRecommendations && (
-          <div className="mt-2.5 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent p-3.5 shadow-md space-y-2">
-            <div className="flex items-center gap-1.5 text-amber-400 text-xs font-bold uppercase tracking-wider">
+          <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-indigo-600 text-xs font-semibold">
               <Lightbulb className="w-3.5 h-3.5" />
-              Actionable Recommendations
+              Recommendations
             </div>
-            <div className="space-y-1.5">
+            <ul className="space-y-1 text-xs text-slate-700 leading-snug pl-1">
               {message.actionableRecommendations!.map((rec, rIdx) => (
-                <div
-                  key={rIdx}
-                  className="p-2 rounded-xl bg-gray-950/60 border border-white/[0.05] text-xs text-gray-300 leading-snug"
-                >
-                  <span className="text-amber-400 font-bold mr-1.5">•</span>
-                  {rec}
-                </div>
+                <li key={rIdx} className="flex items-start gap-1.5">
+                  <span className="text-indigo-600 font-bold">•</span>
+                  <span>{rec}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 
-        {/* Timestamp */}
-        <p className={`text-[10px] text-gray-500 font-medium ${isUser ? "text-right" : "text-left"}`}>
-          {message.timestamp.toLocaleTimeString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
+        {/* Footer: Timestamp & Subtle Audio Toggle */}
+        <div className={`flex items-center gap-2 pt-0.5 ${isUser ? "justify-end" : "justify-between"}`}>
+          <p className={`text-[11px] font-medium ${isUser ? "text-indigo-100" : "text-slate-500"}`}>
+            {message.timestamp.toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+
+          {!isUser && speechText && (
+            <button
+              type="button"
+              onClick={speak}
+              title={isSpeaking ? "Mute audio brief" : "Listen to audio brief"}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                isSpeaking
+                  ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                  : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200/70"
+              }`}
+            >
+              {isSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+              <span>{isSpeaking ? "Mute" : "Listen"}</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ import { ProductSliderProps } from "@/types/product"
 import Link from "next/link"
 import { cdn } from "@/lib/imageUrl"
 
-export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products }) => {
+export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products, viewAllHref }) => {
   const [productStartIndex, setProductStartIndex] = useState(0)
 
   const getItemsPerView = () => {
@@ -53,9 +53,14 @@ export const ProductSlider: React.FC<ProductSliderProps> = ({ heading, products 
         <div className="sm:px-4 py-3">
           <div className="flex items-center justify-between mb-3 px-2 sm:px-0">
             <h2 className="text-base sm:text-xl font-bold text-gray-800 dark:text-white">{heading}</h2>
-            <button className="text-blue-600 hover:text-blue-700 font-semibold text-xs sm:text-sm">
-              VIEW ALL
-            </button>
+            {viewAllHref && (
+              <Link
+                href={viewAllHref}
+                className="text-blue-600 hover:text-blue-700 font-semibold text-xs sm:text-sm"
+              >
+                VIEW ALL
+              </Link>
+            )}
           </div>
         </div>
       )}

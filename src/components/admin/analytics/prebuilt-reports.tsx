@@ -1,152 +1,202 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card"
-import { Button } from "../../ui/button"
-import { Badge } from "../../ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs"
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { TrendingUp, Users, Globe, Play, Loader2, Tag, ClipboardList } from "lucide-react"
-import { useGetAdminDashboardQuery, useGetProductAnalyticsQuery, useGetGoogleAnalyticsQuery } from "@/redux/api/adminApi"
-// import { COLORS } from "@/lib/utils" // Assuming we might have colors or just use hardcoded
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
+import { Button } from "../../ui/button";
+import { Badge } from "../../ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  TrendingUp,
+  Users,
+  Globe,
+  Play,
+  Loader2,
+  Tag,
+  ClipboardList,
+  Inbox,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { useGetGoogleAnalyticsQuery } from "@/redux/api/adminApi";
+import type { AnalyticsOverviewData } from "@/types/admin";
+import {
+  AnalyticsDateRange,
+  exportAnalyticsCsv,
+  formatAxisDate,
+  formatCompactINR,
+  formatFullINR,
+  formatTooltipValueWithDate,
+  getDatesForPreset,
+} from "@/lib/analytics-utils";
 
 const CHART_COLORS = [
-  "#3b82f6", // Blue
-  "#10b981", // Green
-  "#f59e0b", // Orange
-  "#ef4444", // Red
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-  "#06b6d4", // Cyan
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
 ];
 
-export default function PrebuiltReports() {
-  const { data: dashboardData, isLoading: isDashboardLoading } = useGetAdminDashboardQuery();
-  const { data: productData, isLoading: isProductLoading } = useGetProductAnalyticsQuery();
-  const { data: googleData } = useGetGoogleAnalyticsQuery();
+interface PrebuiltReportsProps {
+  overview?: AnalyticsOverviewData;
+  isLoading?: boolean;
+  dateRange?: AnalyticsDateRange;
+  onResetRange?: () => void;
+}
 
-  const isLoading = isDashboardLoading || isProductLoading;
+function SalesTrendTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ dataKey?: string; name?: string; value?: number; color?: string }>;
+  label?: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs space-y-1">
+      {payload.map((entry) => (
+        <div key={String(entry.dataKey)} className="flex items-center gap-2">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: entry.color || "#3b82f6" }}
+          />
+          <span className="text-muted-foreground">{entry.name}:</span>
+          <span className="font-semibold text-foreground">
+            {formatTooltipValueWithDate("sales", entry.value ?? 0, label)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function PrebuiltReports({
+  overview,
+  isLoading = false,
+  dateRange = getDatesForPreset("30d"),
+  onResetRange,
+}: PrebuiltReportsProps) {
+  const [activeTab, setActiveTab] = useState("sales-trend");
+  const { data: googleData } = useGetGoogleAnalyticsQuery();
 
   if (isLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
-  // Transform Sales Trend Data
-  const salesTrendData = dashboardData?.charts?.last12Months?.series?.map(item => ({
-    month: item.month,
-    sales: item.revenue,
-    target: Math.round(item.revenue * 1.1) // Mock target as 110% of revenue
-  })) || [];
+  const salesTrendData =
+    overview?.series?.map((item) => ({
+      date: item.date,
+      sales: item.sales ?? item.revenue,
+      target: item.target ?? Math.round((item.revenue || 0) * 1.1),
+    })) || [];
 
-  // Transform Geographic Data: Prefer GA data if available, else DB data
-  const dbGeographicData = dashboardData?.byRegion?.map(item => ({
-    country: item.region,
-    revenue: item.revenue,
-    percentage: parseFloat(((item.revenue / (dashboardData?.summary?.revenue || 1)) * 100).toFixed(1))
-  })) || [];
-
-  const gaGeographicData = googleData?.countries?.map((item: any) => ({
-    country: item.country,
-    revenue: item.revenue, // This might be 0 if not tracking ecommerce
-    percentage: parseFloat(item.percentage)
-  })) || [];
-
-  const geographicData = gaGeographicData.length > 0 ? gaGeographicData : dbGeographicData;
-
-  // Transform Conversion Funnel Data (Realistic & Guarded)
-  const dbUsers = dashboardData?.summary?.users || 0;
-  const orders = dashboardData?.summary?.orders || 0;
-  const abandonedCarts = dashboardData?.summary?.abandonedCarts || 0;
-  const gaVisitors = googleData?.totalActiveUsers || 0;
-
-  // In e-commerce, total store visitors can never be fewer than orders.
-  // Standard conversion from visitor to purchase is ~3%.
-  // We determine realistic visitors from GA, or estimate based on orders & registered users.
-  const totalVisitors = Math.max(
-    gaVisitors,
-    dbUsers * 8,
-    orders > 0 ? Math.round(orders * 28.5) : 0,
-    dbUsers > 0 ? dbUsers : 0,
-    orders > 0 ? orders * 5 : 50
+  const hasSalesActivity = salesTrendData.some(
+    (d) => Number(d.sales || 0) > 0 || Number(d.target || 0) > 0
   );
 
-  const productViews = Math.max(Math.round(totalVisitors * 0.58), orders > 0 ? Math.round(orders * 10) : 0);
-  const addToCart = Math.max(Math.round(totalVisitors * 0.18), orders + abandonedCarts, orders > 0 ? Math.round(orders * 2.2) : 0);
-  const checkouts = Math.max(Math.round(totalVisitors * 0.08), Math.round(orders * 1.3), orders);
+  const dbGeographicData =
+    overview?.byRegion?.map((item) => ({
+      country: item.region,
+      revenue: item.revenue,
+      percentage: item.percentage,
+    })) || [];
 
-  const realConversionFunnel = [
-    {
-      stage: "Visitors",
-      count: totalVisitors,
-      percentage: totalVisitors > 0 ? "100.0" : "0.0"
-    },
-    {
-      stage: "Product Views",
-      count: productViews,
-      percentage: totalVisitors > 0 ? Math.min(100, (productViews / totalVisitors) * 100).toFixed(1) : "0.0"
-    },
-    {
-      stage: "Add to Cart",
-      count: addToCart,
-      percentage: totalVisitors > 0 ? Math.min(100, (addToCart / totalVisitors) * 100).toFixed(1) : "0.0"
-    },
-    {
-      stage: "Checkout",
-      count: checkouts,
-      percentage: totalVisitors > 0 ? Math.min(100, (checkouts / totalVisitors) * 100).toFixed(1) : "0.0"
-    },
-    {
-      stage: "Purchase",
-      count: orders,
-      percentage: totalVisitors > 0 ? Math.min(100, (orders / totalVisitors) * 100).toFixed(1) : "0.0"
-    },
+  const gaGeographicData =
+    googleData?.countries?.map((item: any) => ({
+      country: item.country,
+      revenue: item.revenue,
+      percentage: parseFloat(item.percentage),
+    })) || [];
+
+  const geographicData =
+    gaGeographicData.length > 0 ? gaGeographicData : dbGeographicData;
+
+  const conversionFunnel = overview?.conversionFunnel || [
+    { stage: "Visitors", count: 0, percentage: "0.0" },
+    { stage: "Product Views", count: 0, percentage: "0.0" },
+    { stage: "Add to Cart", count: 0, percentage: "0.0" },
+    { stage: "Checkout", count: 0, percentage: "0.0" },
+    { stage: "Purchase", count: 0, percentage: "0.0" },
   ];
 
-  // Transform Categories Data
-  const categoryData = productData?.topCategories?.map((cat, index) => ({
+  const categoryData = (overview?.topCategories || []).map((cat, index) => ({
     name: cat.name,
-    value: cat.count,
-    color: CHART_COLORS[index % CHART_COLORS.length]
-  })) || [];
+    value: cat.value,
+    revenue: cat.revenue,
+    color: CHART_COLORS[index % CHART_COLORS.length],
+  }));
+  const nonZeroCategoryData = categoryData.filter((c) => c.value > 0);
 
-  // Transform Order Status Data
-  const orderStatusData = dashboardData?.ordersByStatus ? Object.entries(dashboardData.ordersByStatus).map(([status, count], index) => ({
-    status,
-    count,
-    color: CHART_COLORS[index % CHART_COLORS.length]
-  })) : [];
+  const orderStatusData = overview?.ordersByStatus
+    ? Object.entries(overview.ordersByStatus).map(([status, count], index) => ({
+        status,
+        count,
+        color: CHART_COLORS[index % CHART_COLORS.length],
+      }))
+    : [];
 
   const totalOrders = orderStatusData.reduce((acc, curr) => acc + curr.count, 0);
 
-  // Transform Traffic Data from Google Analytics
-  const trafficSourceData = googleData?.traffic?.map((item: any, index: number) => ({
-    name: item.name,
-    value: parseFloat(item.value), // percentage
-    count: item.count,
-    color: CHART_COLORS[index % CHART_COLORS.length]
-  })) || [];
+  const trafficSourceData =
+    googleData?.traffic?.map((item: any, index: number) => ({
+      name: item.name,
+      value: parseFloat(item.value),
+      count: item.count,
+      color: CHART_COLORS[index % CHART_COLORS.length],
+    })) || [];
+
+  const handleRunReport = (reportTitle: string) => {
+    if (exportAnalyticsCsv(overview, dateRange)) {
+      toast.success(`${reportTitle} exported`);
+    } else {
+      toast.error("No report data available to export");
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-2xl font-bold">Pre-built Reports</h2>
         <div className="flex items-center gap-2">
           {googleData?.realtime > 0 && (
-            <Badge variant="outline" className="animate-pulse border-green-500 text-green-500">
+            <Badge
+              variant="outline"
+              className="animate-pulse border-green-500 text-green-500"
+            >
               {googleData.realtime} Active Users
             </Badge>
           )}
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setActiveTab("sales-trend")}
+          >
             View All Reports
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="sales-trend" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-auto gap-1 p-1">
           <TabsTrigger value="sales-trend">Sales Trend</TabsTrigger>
           <TabsTrigger value="conversion">Conversion</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -158,15 +208,17 @@ export default function PrebuiltReports() {
         <TabsContent value="sales-trend">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" />
                     Sales Trend Report
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">Monthly sales performance vs targets</p>
+                  <p className="text-sm text-muted-foreground">
+                    Actual sales vs target for the selected period
+                  </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleRunReport("Sales Trend Report")}>
                   <Play className="w-4 h-4 mr-2" />
                   Run Report
                 </Button>
@@ -174,36 +226,78 @@ export default function PrebuiltReports() {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={salesTrendData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border opacity-50" />
-                    <XAxis
-                      dataKey="month"
-                      className="text-[10px]"
-                      tick={{ fill: 'var(--muted-foreground)' }}
-                      axisLine={false}
-                      tickLine={false}
-                      dy={10}
-                    />
-                    <YAxis
-                      className="text-[10px]"
-                      tick={{ fill: 'var(--muted-foreground)' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--color-card)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-md)",
-                        color: "var(--color-foreground)",
-                      }}
-                      formatter={(value: any) => [`$${(Number(value) || 0).toLocaleString()}`, "Amount"]}
-                    />
-                    <Bar dataKey="sales" fill="#3b82f6" name="Actual Sales" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="target" fill="#e5e7eb" name="Target" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {!hasSalesActivity || salesTrendData.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center border border-dashed border-border rounded-lg text-center px-4">
+                    <Inbox className="h-6 w-6 text-muted-foreground mb-2" />
+                    <p className="text-sm font-medium text-foreground">
+                      No sales data in this date range
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Adjust the global date filter to view sales performance trends.
+                    </p>
+                    {onResetRange && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={onResetRange}
+                      >
+                        Switch to Last 90 Days
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={salesTrendData}
+                      barCategoryGap={salesTrendData.length <= 3 ? "35%" : "20%"}
+                      margin={{ top: 10, right: 24, left: 4, bottom: 16 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-border opacity-50"
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatAxisDate}
+                        minTickGap={24}
+                        interval="preserveStartEnd"
+                        className="text-[11px]"
+                        tick={{ fill: "var(--muted-foreground)" }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={8}
+                      />
+                      <YAxis
+                        tickFormatter={formatCompactINR}
+                        width={66}
+                        className="text-[11px]"
+                        tick={{ fill: "var(--muted-foreground)" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={<SalesTrendTooltip />}
+                        cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                      />
+                      <Bar
+                        dataKey="sales"
+                        fill="#3b82f6"
+                        name="Actual Sales"
+                        maxBarSize={42}
+                        radius={[6, 6, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="target"
+                        fill="#94a3b8"
+                        fillOpacity={0.35}
+                        name="Target"
+                        maxBarSize={42}
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -212,15 +306,17 @@ export default function PrebuiltReports() {
         <TabsContent value="conversion">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Users className="w-5 h-5" />
                     Conversion Funnel Report
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">Customer journey and conversion rates</p>
+                  <p className="text-sm text-muted-foreground">
+                    Customer journey and conversion rates
+                  </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleRunReport("Conversion Report")}>
                   <Play className="w-4 h-4 mr-2" />
                   Run Report
                 </Button>
@@ -228,14 +324,19 @@ export default function PrebuiltReports() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {realConversionFunnel.map((stage) => {
-                  const safePercent = Math.min(100, Math.max(0, parseFloat(String(stage.percentage)) || 0));
+                {conversionFunnel.map((stage) => {
+                  const safePercent = Math.min(
+                    100,
+                    Math.max(0, parseFloat(String(stage.percentage)) || 0)
+                  );
                   return (
                     <div key={stage.stage} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm">{stage.stage}</span>
                         <div className="text-right flex items-center gap-2">
-                          <span className="font-semibold text-sm">{Number(stage.count).toLocaleString()}</span>
+                          <span className="font-semibold text-sm">
+                            {Number(stage.count).toLocaleString("en-IN")}
+                          </span>
                           <Badge variant="secondary" className="font-mono text-xs">
                             {stage.percentage}%
                           </Badge>
@@ -258,53 +359,78 @@ export default function PrebuiltReports() {
         <TabsContent value="categories">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Tag className="w-5 h-5" />
                     Category Distribution
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">Product breakdown by category</p>
+                  <p className="text-sm text-muted-foreground">
+                    Sales and product breakdown by category
+                  </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleRunReport("Category Report")}>
                   <Play className="w-4 h-4 mr-2" />
                   Run Report
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+              {nonZeroCategoryData.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                  No category activity found for this period.
                 </div>
-                <div className="space-y-3">
-                  {categoryData.map((cat) => (
-                    <div key={cat.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                        <span className="font-medium">{cat.name}</span>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={nonZeroCategoryData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}`}
+                        >
+                          {nonZeroCategoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: any) => [
+                            `${Number(value || 0).toLocaleString("en-IN")} Units`,
+                            "Volume",
+                          ]}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {nonZeroCategoryData.map((cat) => (
+                      <div key={cat.name} className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          <span className="font-medium text-sm">{cat.name}</span>
+                        </div>
+                        <div className="text-right text-sm">
+                          <span className="font-semibold">
+                            {cat.value.toLocaleString("en-IN")} units
+                          </span>
+                          {cat.revenue > 0 && (
+                            <span className="text-muted-foreground ml-2">
+                              ({formatFullINR(cat.revenue)})
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-semibold">{cat.value} Products</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -312,57 +438,70 @@ export default function PrebuiltReports() {
         <TabsContent value="traffic">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Globe className="w-5 h-5" />
                     Traffic Source Report (Google Analytics)
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">Breakdown of traffic sources</p>
+                  <p className="text-sm text-muted-foreground">
+                    Breakdown of traffic sources
+                  </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleRunReport("Traffic Report")}>
                   <Play className="w-4 h-4 mr-2" />
                   Run Report
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={trafficSourceData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}%`}
-                      >
-                        {trafficSourceData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+              {trafficSourceData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-lg">
+                  <Globe className="h-6 w-6 text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium text-foreground">
+                    No traffic data available
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Connect Google Analytics in Settings to track acquisition channels.
+                  </p>
                 </div>
-                <div className="space-y-3">
-                  {trafficSourceData.length > 0 ? trafficSourceData.map((source: any) => (
-                    <div key={source.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: source.color }} />
-                        <span className="font-medium">{source.name}</span>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={trafficSourceData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}%`}
+                        >
+                          {trafficSourceData.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {trafficSourceData.map((source: any) => (
+                      <div key={source.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: source.color }}
+                          />
+                          <span className="font-medium">{source.name}</span>
+                        </div>
+                        <span className="font-semibold">{source.value}%</span>
                       </div>
-                      <span className="font-semibold">{source.value}%</span>
-                    </div>
-                  )) : (
-                    <div className="text-muted-foreground text-sm col-span-2">
-                      No traffic data available. Ensure Google Analytics is configured.
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -370,15 +509,18 @@ export default function PrebuiltReports() {
         <TabsContent value="geographic">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Globe className="w-5 h-5" />
-                    Geographic Heatmap {gaGeographicData.length > 0 ? '(Google Analytics)' : ''}
+                    Geographic Heatmap{" "}
+                    {gaGeographicData.length > 0 ? "(Google Analytics)" : ""}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">Revenue/Users distribution by country</p>
+                  <p className="text-sm text-muted-foreground">
+                    Revenue and order distribution by region
+                  </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleRunReport("Geographic Report")}>
                   <Play className="w-4 h-4 mr-2" />
                   Run Report
                 </Button>
@@ -386,30 +528,37 @@ export default function PrebuiltReports() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {geographicData.length > 0 ? geographicData.map((country: any) => {
-                  const safeGeoPercent = Math.min(100, Math.max(0, parseFloat(String(country.percentage)) || 0));
-                  return (
-                    <div key={country.country} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{country.country}</span>
-                        <div className="text-right flex items-center gap-2">
-                          <span className="font-semibold text-sm">${(Number(country.revenue) || 0).toLocaleString()}</span>
-                          <Badge variant="secondary" className="font-mono text-xs">
-                            {country.percentage}%
-                          </Badge>
+                {geographicData.length > 0 ? (
+                  geographicData.map((country: any) => {
+                    const safeGeoPercent = Math.min(
+                      100,
+                      Math.max(0, parseFloat(String(country.percentage)) || 0)
+                    );
+                    return (
+                      <div key={country.country} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{country.country}</span>
+                          <div className="text-right flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                              {formatFullINR(country.revenue || 0)}
+                            </span>
+                            <Badge variant="secondary" className="font-mono text-xs">
+                              {country.percentage}%
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="w-full bg-muted/60 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="bg-primary h-2.5 rounded-full transition-all duration-300 max-w-full"
+                            style={{ width: `${safeGeoPercent}%` }}
+                          />
                         </div>
                       </div>
-                      <div className="w-full bg-muted/60 rounded-full h-2.5 overflow-hidden">
-                        <div
-                          className="bg-primary h-2.5 rounded-full transition-all duration-300 max-w-full"
-                          style={{ width: `${safeGeoPercent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                }) : (
-                  <div className="text-center py-10 text-muted-foreground">
-                    No geographic data available yet.
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-10 text-muted-foreground text-sm">
+                    No geographic data available for this date range.
                   </div>
                 )}
               </div>
@@ -420,15 +569,17 @@ export default function PrebuiltReports() {
         <TabsContent value="order-status">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <ClipboardList className="w-5 h-5" />
                     Order Status Breakdown
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">Current status of all orders</p>
+                  <p className="text-sm text-muted-foreground">
+                    Status breakdown of orders in the selected range
+                  </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={() => handleRunReport("Order Status Report")}>
                   <Play className="w-4 h-4 mr-2" />
                   Run Report
                 </Button>
@@ -439,28 +590,49 @@ export default function PrebuiltReports() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Count</th>
-                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">Percentage</th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                        Count
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-muted-foreground">
+                        Percentage
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orderStatusData.length > 0 ? orderStatusData.map((item) => (
-                      <tr key={item.status} className="border-b border-border">
-                        <td className="py-3 px-4 font-medium">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                            {item.status}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">{item.count.toLocaleString()}</td>
-                        <td className="py-3 px-4 font-semibold">
-                          {totalOrders > 0 ? ((item.count / totalOrders) * 100).toFixed(1) : 0}%
-                        </td>
-                      </tr>
-                    )) : (
+                    {orderStatusData.length > 0 ? (
+                      orderStatusData.map((item) => (
+                        <tr key={item.status} className="border-b border-border">
+                          <td className="py-3 px-4 font-medium capitalize">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              {item.status}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            {item.count.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-4 font-semibold">
+                            {totalOrders > 0
+                              ? ((item.count / totalOrders) * 100).toFixed(1)
+                              : 0}
+                            %
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
                       <tr>
-                        <td colSpan={3} className="text-center py-6 text-muted-foreground">No order data available.</td>
+                        <td
+                          colSpan={3}
+                          className="text-center py-8 text-muted-foreground text-sm"
+                        >
+                          No orders found for the selected date range.
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -471,5 +643,5 @@ export default function PrebuiltReports() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

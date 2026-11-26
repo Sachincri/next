@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loading = queryLoading;
 
   if (loading) {
-    return <Loader />;
+    return <Loader fullScreen size="lg" />;
   }
 
   return <>{children}</>;

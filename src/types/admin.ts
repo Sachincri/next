@@ -142,6 +142,60 @@ export interface CustomerAnalytics {
     topCustomers: Array<{ name: string; orderCount: number; totalSpent: number }>;
 }
 
+export interface AnalyticsKpiMetric {
+    value: number;
+    previous: number;
+    change: number;
+}
+
+export interface AnalyticsOverviewData {
+    range: {
+        preset: "7d" | "30d" | "this_month" | "90d" | "custom";
+        from: string;
+        to: string;
+        spanDays: number;
+        bucketType: "day" | "month";
+    };
+    hasData: boolean;
+    kpis: {
+        totalRevenue: AnalyticsKpiMetric;
+        totalOrders: AnalyticsKpiMetric;
+        avgOrderValue: AnalyticsKpiMetric;
+        conversionRate: AnalyticsKpiMetric;
+    };
+    summary: {
+        users: number;
+        newUsers: number;
+        abandonedCarts: number;
+    };
+    series: Array<{
+        date: string;
+        revenue: number;
+        orders: number;
+        aov: number;
+        sales: number;
+        target: number;
+    }>;
+    ordersByStatus: Record<string, number>;
+    byRegion: Array<{
+        region: string;
+        revenue: number;
+        orders: number;
+        percentage: number;
+    }>;
+    topCategories: Array<{
+        name: string;
+        value: number;
+        revenue: number;
+        productCount: number;
+    }>;
+    conversionFunnel: Array<{
+        stage: string;
+        count: number;
+        percentage: string;
+    }>;
+}
+
 export interface AdminState {
     loading: boolean;
     users: User[];

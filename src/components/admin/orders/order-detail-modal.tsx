@@ -5,11 +5,12 @@ import { Badge } from "@/ui/badge"
 import { Button } from "@/ui/button"
 import { Separator } from "@/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
-import { MapPin, CreditCard, Package, Truck, CheckCircle, Clock, RefreshCw, Mail } from "lucide-react"
-import { useRefundOrderMutation, useUpdateOrderMutation, useSendOrderEmailMutation } from "@/redux/api/adminApi"
+import { MapPin, CreditCard, Package, Truck, CheckCircle, Clock, RefreshCw, Mail, Share2, Printer, FileText } from "lucide-react"
+import { useRefundOrderMutation, useUpdateOrderMutation, useSendOrderEmailMutation, useGetAppSettingsQuery } from "@/redux/api/adminApi"
 import toast from "react-hot-toast"
 import { createRoot } from "react-dom/client"
-import InvoiceTemplate from "./invoice-template"
+import InvoiceTemplate, { printInvoice } from "./invoice-template"
+import { resolveOrderPaymentStatus } from "@/lib/order-utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select"
 import { useState } from "react"
 import {
@@ -36,6 +37,7 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
 
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
   const [showRefundConfirm, setShowRefundConfirm] = useState(false);
+  const { data: storeSettings } = useGetAppSettingsQuery();
 
   if (!order) return null
 
@@ -74,43 +76,7 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
   };
 
   const handlePrintLabel = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print Invoice</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-          </head>
-          <body>
-            <div id="print-root"></div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-
-      setTimeout(() => {
-        const rootEl = printWindow.document.getElementById('print-root');
-        if (rootEl) {
-          const root = createRoot(rootEl);
-          root.render(<InvoiceTemplate order={order} />);
-
-          let checkCount = 0;
-          const checkTailwind = setInterval(() => {
-            const hasStyle = printWindow.document.querySelector('style');
-            if (hasStyle || checkCount > 30) {
-              clearInterval(checkTailwind);
-              setTimeout(() => {
-                printWindow.print();
-              }, 500);
-            }
-            checkCount++;
-          }, 100);
-        }
-      }, 50);
-    } else {
-      toast.error("Popup blocked. Please allow popups for this site.");
-    }
+    printInvoice(order, storeSettings);
   };
 
   const getStatusIcon = (status: string) => {
@@ -130,17 +96,53 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
     }
   }
 
+  const normStatus = (order.orderStatus || "").toLowerCase();
+  const isCancelled = normStatus === "cancelled" || normStatus === "canceled";
+  const isRefunded = normStatus === "refunded" || normStatus === "returned";
+
+  const isProcessingReached = ["processing", "shipped", "delivered"].includes(normStatus);
+  const isShippedReached = ["shipped", "delivered"].includes(normStatus);
+  const isDeliveredReached = normStatus === "delivered";
+
   const orderTimeline = [
-    { status: "Order Placed", date: new Date(order.createdAt).toLocaleString(), completed: true },
-    { status: "Processing", date: order.orderStatus === "processing" || order.orderStatus === "shipped" || order.orderStatus === "delivered" ? "Completed" : "Pending", completed: order.orderStatus !== "placed" },
-    { status: "Shipped", date: order.orderStatus === "shipped" || order.orderStatus === "delivered" ? "Completed" : "Pending", completed: order.orderStatus === "shipped" || order.orderStatus === "delivered" },
-    { status: "Delivered", date: order.deliveredAt ? new Date(order.deliveredAt).toLocaleString() : "Pending", completed: order.orderStatus === "delivered" },
-  ]
+    {
+      status: "Order Placed",
+      date: order.createdAt ? new Date(order.createdAt).toLocaleString() : "N/A",
+      completed: true,
+    },
+    {
+      status: "Processing",
+      date: order.processingAt
+        ? new Date(order.processingAt).toLocaleString()
+        : isProcessingReached
+        ? (normStatus === "processing" ? "In Progress" : "Completed")
+        : "Pending",
+      completed: isProcessingReached,
+    },
+    {
+      status: "Shipped",
+      date: order.shippedAt
+        ? new Date(order.shippedAt).toLocaleString()
+        : isShippedReached
+        ? (normStatus === "shipped" ? "In Transit" : "Completed")
+        : "Pending",
+      completed: isShippedReached,
+    },
+    {
+      status: "Delivered",
+      date: order.deliveredAt
+        ? new Date(order.deliveredAt).toLocaleString()
+        : isDeliveredReached
+        ? "Delivered"
+        : "Pending",
+      completed: isDeliveredReached,
+    },
+  ];
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-[95vw] w-[95vw] lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[1550px] h-[92vh] max-h-[94vh] overflow-hidden flex flex-col p-0 gap-0">
           <DialogHeader className="p-6 pb-2 border-b">
             <DialogTitle className="flex items-center gap-2 text-xl">
               Order Details - <span className="font-mono text-primary">#{order._id}</span>
@@ -149,7 +151,7 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6">
-
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Order Information */}
             <div className="lg:col-span-2 space-y-6">
               {/* Customer & Shipping */}
@@ -181,24 +183,88 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Package className="w-5 h-5" />
-                    Order Items
+                    Order Items ({order.orderItems?.length || 0})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {order.orderItems?.map((product: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between py-2">
-                        <div className="flex-1">
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">Quantity: {product.quantity}</p>
+                    {order.orderItems?.map((product: any, index: number) => {
+                      const itemPrice = Number(product.sellingPrice ?? product.price ?? 0);
+                      const itemQty = Number(product.quantity || 1);
+                      const itemTotal = itemPrice * itemQty;
+                      return (
+                        <div key={index} className="flex items-center justify-between py-2.5 gap-3 border-b border-border/50 last:border-0">
+                          {product.image && (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-12 h-12 rounded-lg object-contain bg-muted border shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{product.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <span>Quantity: {itemQty}</span>
+                              {product.size && <span>• Size: {product.size}</span>}
+                              {product.color && <span>• Color: {product.color}</span>}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-semibold text-sm">₹{itemTotal.toLocaleString()}</p>
+                            {itemQty > 1 && (
+                              <p className="text-[11px] text-muted-foreground">₹{itemPrice.toLocaleString()} each</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="font-semibold">₹{product.price}</p>
+                      );
+                    })}
+
+                    <div className="pt-3 space-y-2 text-sm border-t">
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>Items Subtotal</span>
+                        <span>₹{Number(order.itemsPrice ?? order.orderItems?.reduce((acc: number, item: any) => acc + (Number(item.sellingPrice ?? item.price ?? 0) * Number(item.quantity || 1)), 0) ?? 0).toLocaleString()}</span>
                       </div>
-                    ))}
-                    <Separator />
-                    <div className="flex items-center justify-between font-semibold">
-                      <span>Total</span>
-                      <span>₹{order.totalPrice}</span>
+                      {Boolean(order.shippingPrice) && (
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Shipping Charges</span>
+                          <span>₹{Number(order.shippingPrice).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {Boolean(order.coupon?.discount || order.couponDiscount) && (
+                        <div className="flex items-center justify-between text-emerald-600 font-medium">
+                          <span>Coupon Discount {order.coupon?.code ? `(${order.coupon.code})` : ''}</span>
+                          <span>-₹{Number(order.coupon?.discount || order.couponDiscount).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {Boolean(order.redeemCoins) && (
+                        <div className="flex items-center justify-between text-amber-600 font-medium">
+                          <span>Coins Redeemed</span>
+                          <span>-₹{Number(order.redeemCoins).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex items-center justify-between font-bold text-base pt-1">
+                        <span>Total Price</span>
+                        <span className="text-primary text-lg">₹{Number(order.totalPrice ?? order.totalAmount ?? 0).toLocaleString()}</span>
+                      </div>
+                      {Boolean(order.gstAmount || order.taxableAmount) && (
+                        <div className="text-[11px] text-muted-foreground flex justify-between pt-0.5">
+                          <span>Inclusive of GST ({order.gstRate || 18}%)</span>
+                          <span>₹{Number(order.gstAmount).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {Boolean(order.isPartialCod || order.paymentInfo?.method === "Partial COD") && (
+                        <div className="pt-2 border-t border-dashed space-y-1">
+                          <div className="flex items-center justify-between text-emerald-600 font-medium text-sm">
+                            <span>Advance Paid (Online)</span>
+                            <span>₹{Number(order.advancePayment ?? order.paymentInfo?.advanceAmount ?? 0).toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-indigo-600 font-bold text-sm">
+                            <span>Balance Due on Delivery</span>
+                            <span>₹{Number(order.remainingBalance ?? order.paymentInfo?.dueAmount ?? 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -213,29 +279,45 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span>Payment Status</span>
-                    <Badge
-                      className={
-                        order.paymentInfo?.status?.toLowerCase() === "succeeded" || order.paymentInfo?.status?.toLowerCase() === "success"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }
-                    >
-                      {order.paymentInfo?.status || "pending"}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Payment Method</span>
-                    <span className="text-sm">{order.paymentInfo?.method || "N/A"}</span>
-                  </div>
+                  {(() => {
+                    const payment = resolveOrderPaymentStatus(order);
+                    return (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span>Payment Status</span>
+                          <Badge className={`${payment.tailwindBadgeClass} hover:${payment.tailwindBadgeClass}`}>
+                            {payment.badgeText}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Payment Method</span>
+                          <span className="text-sm font-medium">
+                            {payment.method}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                  {Boolean(order.isPartialCod || order.paymentInfo?.method === "Partial COD") && (
+                    <>
+                      <div className="flex items-center justify-between text-emerald-600">
+                        <span>Advance Deposit (Online)</span>
+                        <span className="text-sm font-semibold">₹{Number(order.advancePayment ?? order.paymentInfo?.advanceAmount ?? 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-indigo-600">
+                        <span>Due on Delivery (Cash)</span>
+                        <span className="text-sm font-bold">₹{Number(order.remainingBalance ?? order.paymentInfo?.dueAmount ?? 0).toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-center justify-between">
                     <span>Transaction ID</span>
                     <span className="text-sm font-mono">{order.paymentInfo?.id || order.paymentInfo?.razorpay_payment_id || "N/A"}</span>
                   </div>
 
-                  {(order.paymentInfo?.status?.toLowerCase() === "succeeded" || order.paymentInfo?.status?.toLowerCase() === "success")
+                  {((order.paymentInfo?.status?.toLowerCase() === "succeeded" || order.paymentInfo?.status?.toLowerCase() === "success" || order.isPartialCod || order.paymentInfo?.status === "Partially Paid")
                     && order.orderStatus?.toLowerCase() !== "refunded"
+                    && (order.paymentInfo?.id && order.paymentInfo?.id !== 'COD'))
                     && (
                       <Button
                         variant="outline"
@@ -245,7 +327,7 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                         disabled={isRefunding}
                       >
                         <RefreshCw className={`w-4 h-4 mr-2 ${isRefunding ? 'animate-spin' : ''}`} />
-                        {isRefunding ? "Processing Refund..." : "Process Refund"}
+                        {isRefunding ? "Processing Refund..." : "Process Refund (Advance Payment)"}
                       </Button>
                     )}
                   {order.orderStatus?.toLowerCase() === "refunded" && (
@@ -255,6 +337,65 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                   )}
                 </CardContent>
               </Card>
+
+              {/* Referral / Affiliate Information */}
+              {Boolean(order.referralCode || order.referredBy) && (
+                <Card className="border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/20 dark:bg-indigo-950/20">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200">
+                        <Share2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        Referral / Affiliate
+                      </span>
+                      <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/60 dark:text-indigo-300">
+                        Referred Order
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Referral Code</span>
+                      <span className="text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                        {order.referralCode || "N/A"}
+                      </span>
+                    </div>
+                    {order.referredBy && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Referred By (Partner)</span>
+                          <span className="text-sm font-semibold">
+                            {order.referredBy.name || "Affiliate User"}
+                          </span>
+                        </div>
+                        {order.referredBy.email && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Partner Email</span>
+                            <span className="text-xs font-mono">{order.referredBy.email}</span>
+                          </div>
+                        )}
+                        {order.referredBy.phone && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Partner Phone</span>
+                            <span className="text-xs">{order.referredBy.phone}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div className="flex items-center justify-between pt-2 border-t border-indigo-100 dark:border-indigo-900/30">
+                      <span className="text-sm text-muted-foreground">Commission Status</span>
+                      <Badge
+                        className={
+                          order.referralCommissionPaid
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                        }
+                      >
+                        {order.referralCommissionPaid ? "Commission Credited" : "Pending Return Window"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               {/* Shipment Tracking Information */}
               {order.shipment && order.shipment.provider !== "manual" && (
                 <Card>
@@ -312,10 +453,10 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                   <div className="space-y-4">
                     {orderTimeline.map((item, index) => (
                       <div key={index} className="flex items-start gap-3">
-                        <div className={`w-2 h-2 rounded-full mt-2 ${item.completed ? "bg-primary" : "bg-muted"}`} />
-                        <div className="flex-1">
+                        <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${item.completed ? "bg-primary ring-4 ring-primary/20" : "bg-muted-foreground/30"}`} />
+                        <div className="flex-1 min-w-0">
                           <p
-                            className={`text-sm font-medium ${item.completed ? "text-foreground" : "text-muted-foreground"}`}
+                            className={`text-sm ${item.completed ? "font-semibold text-foreground" : "font-medium text-muted-foreground"}`}
                           >
                             {item.status}
                           </p>
@@ -323,11 +464,20 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                         </div>
                       </div>
                     ))}
-                    {order.orderStatus?.toLowerCase() === "refunded" && (
+                    {isCancelled && (
                       <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full mt-2 bg-red-500" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">Refunded</p>
+                        <div className="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 bg-red-500 ring-4 ring-red-100" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-red-600">Order Cancelled</p>
+                          <p className="text-xs text-muted-foreground">{order.cancelledAt ? new Date(order.cancelledAt).toLocaleString() : "Cancelled"}</p>
+                        </div>
+                      </div>
+                    )}
+                    {isRefunded && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 bg-gray-500 ring-4 ring-gray-100" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-700">Refunded / Returned</p>
                           <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString()}</p>
                         </div>
                       </div>
@@ -359,10 +509,11 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
 
                 <Button
                   variant="outline"
-                  className="w-full bg-transparent"
+                  className="w-full bg-transparent flex items-center justify-center gap-2"
                   onClick={handlePrintLabel}
                 >
-                  Print Shipping Label
+                  <Printer className="w-4 h-4" />
+                  Print Tax Invoice / Label
                 </Button>
                 <Button
                   variant="outline"
@@ -373,6 +524,7 @@ export default function OrderDetailModal({ order, open, onOpenChange }: OrderDet
                   {isSendingEmail ? "Sending..." : "Send Email Notification"}
                 </Button>
               </div>
+            </div>
             </div>
           </div>
         </DialogContent>

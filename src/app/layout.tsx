@@ -5,7 +5,15 @@ import { Outfit } from 'next/font/google';
 import './globals.css';
 import { ChatBot } from '@/components/ai/ChatBot';
 import { DynamicFavicon } from '@/components/common/DynamicFavicon';
+import { BackendWarmup } from '@/components/common/BackendWarmup';
 import Script from 'next/script';
+import {
+  getSiteUrl,
+  fetchActiveHomeData,
+  buildHomeMetadata,
+  optimizeFaviconUrl,
+  getFaviconMimeType,
+} from '@/lib/seo-utils';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -21,7 +29,9 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-const DEFAULT_METADATA = {
+const SITE_URL = getSiteUrl();
+
+const DEFAULT_METADATA: Metadata = {
   title: {
     default: 'E-Commerce Store | Best Deals & Products',
     template: '%s | E-Commerce Store',
@@ -29,12 +39,12 @@ const DEFAULT_METADATA = {
   description: 'Shop the latest trends in electronics, fashion, and home goods at unbeatable prices. Fast shipping and secure payment.',
   keywords: ['ecommerce', 'online shopping', 'electronics', 'fashion', 'deals', 'store'],
   authors: [{ name: 'E-Commerce Team' }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     title: 'E-Commerce Store | Best Deals & Products',
     description: 'Shop the latest trends at unbeatable prices.',
     type: 'website',
-    locale: 'en_US',
+    locale: 'en_IN',
     siteName: 'E-Commerce Store',
   },
   twitter: {
@@ -58,56 +68,36 @@ const DEFAULT_METADATA = {
 
 /**
  * Enterprise SSR Dynamic Metadata:
- * Fetches the active store configuration (logo & store branding) on the server.
- * Ensures initial HTML & SEO web crawlers receive the exact dynamic store logo in <link rel="icon">.
+ * Fetches the active store SEO configuration & branding on the server.
+ * Ensures web crawlers & social scrapers (WhatsApp, Facebook, X) receive exact OG tags and icons.
  */
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const rawServerUrl = (process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000/api/v1').trim();
-    const res = await fetch(`${rawServerUrl}/home`, {
-      next: { revalidate: 60 },
-      signal: AbortSignal.timeout(2500),
-    });
+    const homeData = await fetchActiveHomeData();
+    if (homeData) {
+      const seoMeta = buildHomeMetadata(homeData, '/');
+      const faviconUrl = optimizeFaviconUrl(homeData?.headerLogo);
+      const storeName = homeData?.storeName || homeData?.seo?.title || 'E-Commerce Store';
 
-    if (res.ok) {
-      const json = await res.json();
-      const homeData = json?.setHomePageData || json?.data;
-      const logoUrl = typeof homeData?.headerLogo === 'object'
-        ? homeData?.headerLogo?.url
-        : homeData?.headerLogo;
-      const siteName = homeData?.pageName || homeData?.metaTitle || 'E-Commerce Store';
-      const description = homeData?.metaDescription || DEFAULT_METADATA.description;
-
-      if (logoUrl && typeof logoUrl === 'string') {
-        const isSvg = logoUrl.toLowerCase().endsWith('.svg');
-        const iconType = isSvg ? 'image/svg+xml' : 'image/png';
-
-        return {
-          ...DEFAULT_METADATA,
-          title: {
-            default: `${siteName} | Best Deals & Products`,
-            template: `%s | ${siteName}`,
-          },
-          description,
-          icons: {
+      const icons = faviconUrl
+        ? {
             icon: [
-              { url: logoUrl, type: iconType },
-              { url: '/icon.svg?v=2', type: 'image/svg+xml' },
-              { url: '/favicon.ico?v=2' },
+              { url: faviconUrl, type: getFaviconMimeType(faviconUrl) },
             ],
-            shortcut: logoUrl,
-            apple: [
-              { url: logoUrl },
-              { url: '/apple-icon.png?v=2' },
-            ],
-          },
-          openGraph: {
-            ...DEFAULT_METADATA.openGraph,
-            siteName,
-            images: [{ url: logoUrl }],
-          },
-        };
-      }
+            shortcut: faviconUrl,
+            apple: [{ url: faviconUrl }],
+          }
+        : DEFAULT_METADATA.icons;
+
+      return {
+        ...DEFAULT_METADATA,
+        ...seoMeta,
+        title: {
+          default: (seoMeta.title as string) || `${storeName} | Best Deals & Products`,
+          template: `%s | ${storeName}`,
+        },
+        icons,
+      };
     }
   } catch {
     // Graceful fallback during offline build, cold start, or network delay
@@ -126,6 +116,7 @@ export default function RootLayout({
       <body className={`min-h-screen w-full bg-background text-foreground overflow-x-hidden font-sans antialiased`}>
         <Providers>
           <DynamicFavicon />
+          <BackendWarmup />
           {children}
           <ChatBot />
           <Toaster

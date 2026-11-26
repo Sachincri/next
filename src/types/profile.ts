@@ -41,7 +41,7 @@ export interface WalletTransaction {
   status: 'completed' | 'pending';
 }
 
-export type ActiveSection = 'main' | 'personal-info' | 'addresses' | 'orders' | 'rewards' | 'reviews' | 'help' | 'affiliate' | 'logout';
+export type ActiveSection = 'main' | 'personal-info' | 'addresses' | 'orders' | 'rewards' | 'reviews' | 'privacy' | 'help' | 'affiliate' | 'logout';
 
 export interface ProfileState {
   loading: boolean;

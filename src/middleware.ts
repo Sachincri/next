@@ -14,6 +14,16 @@ export function middleware(request: NextRequest) {
 
     const response = NextResponse.next();
 
+    // Auto-capture referral attribution (?ref=... or ?referrer=...)
+    const refCode = request.nextUrl.searchParams.get('ref') || request.nextUrl.searchParams.get('referrer');
+    if (refCode) {
+        response.cookies.set('share_code', refCode.trim(), {
+            path: '/',
+            maxAge: 30 * 24 * 60 * 60, // 30 days referral cookie
+            sameSite: 'lax',
+        });
+    }
+
     // Security Headers
     // response.headers.set('X-Middleware-Debug', 'true');
 
@@ -25,19 +35,37 @@ export function middleware(request: NextRequest) {
     response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
     response.headers.set('X-Next-CSP', 'active');
 
-    // Content Security Policy origin resolution
-    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
-    let serverOrigin = 'http://localhost:5000';
-    try {
-        serverOrigin = new URL(serverUrl).origin;
-    } catch (e) {
-        // Fallback
+    // Content Security Policy origin resolution (include both http(s) and ws(s) for Socket.IO)
+    const connectSrcSet = new Set<string>(["'self'"]);
+    const backendCandidates = [
+        process.env.NEXT_PUBLIC_SERVER_URL,
+        process.env.NEXT_PUBLIC_SOCKET_URL,
+        process.env.NEXT_PUBLIC_API_URL,
+        'https://server-i8py.onrender.com',
+        process.env.NODE_ENV !== 'production' ? 'http://localhost:5000' : '',
+    ];
+
+    for (const candidate of backendCandidates) {
+        if (!candidate) continue;
+        try {
+            const parsed = new URL(candidate.trim());
+            connectSrcSet.add(parsed.origin);
+            if (parsed.protocol === 'https:') {
+                connectSrcSet.add(`wss://${parsed.host}`);
+            } else if (parsed.protocol === 'http:') {
+                connectSrcSet.add(`ws://${parsed.host}`);
+            }
+        } catch {
+            // Ignore non-URL candidates (e.g. relative /api/v1)
+        }
     }
 
-    // Enhanced Permissions-Policy for social media embeds
+    const connectSrcOrigins = Array.from(connectSrcSet).join(' ');
+
+    // Enhanced Permissions-Policy for social media embeds and voice AI chat
     const permissionsPolicy = [
         'camera=()',
-        'microphone=()',
+        'microphone=(self)',
         'geolocation=()',
         'autoplay=(self "https://www.instagram.com" "https://*.instagram.com" "https://www.tiktok.com" "https://*.tiktok.com" "https://www.youtube.com" "https://*.youtube.com")',
         'encrypted-media=(self "https://www.instagram.com" "https://*.instagram.com" "https://www.tiktok.com" "https://*.tiktok.com" "https://www.youtube.com" "https://*.youtube.com")',
@@ -55,7 +83,7 @@ export function middleware(request: NextRequest) {
         font-src 'self' https://fonts.gstatic.com;
         frame-src 'self' https://api.razorpay.com https://js.stripe.com https://www.instagram.com https://*.instagram.com https://www.tiktok.com https://*.tiktok.com https://www.youtube.com https://*.youtube.com https://www.youtube-nocookie.com;
         child-src 'self' blob: https://www.instagram.com https://*.instagram.com https://www.tiktok.com https://*.tiktok.com https://www.youtube.com https://*.youtube.com;
-        connect-src 'self' ${serverOrigin} https://api.razorpay.com https://*.instagram.com https://*.tiktok.com;
+        connect-src ${connectSrcOrigins} https://api.razorpay.com https://*.instagram.com https://*.tiktok.com;
         frame-ancestors 'self';
     `.replace(/\s{2,}/g, ' ').trim();
     response.headers.set('Content-Security-Policy', cspHeader);

@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useGetRealtimeAnalyticsQuery } from "@/redux/api/adminApi";
 import { Loader2, Users, Globe } from "lucide-react";
 import {
@@ -41,12 +43,19 @@ export default function GoogleAnalytics() {
     if (error || (countryData.length === 0 && activeUsers === 0)) {
         return (
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Globe className="w-5 h-5" />
-                        Realtime Traffic
-                    </CardTitle>
-                    <CardDescription>Connect Google Analytics in Settings to see realtime data.</CardDescription>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="space-y-1">
+                        <CardTitle className="flex items-center gap-2">
+                            <Globe className="w-5 h-5" />
+                            Realtime Traffic
+                        </CardTitle>
+                        <CardDescription>
+                            Connect Google Analytics in Settings to see realtime data.
+                        </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" asChild className="w-fit shrink-0">
+                        <Link href="/admin/settings">Connect in Settings →</Link>
+                    </Button>
                 </CardHeader>
             </Card>
         )

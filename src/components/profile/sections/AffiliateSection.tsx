@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { copyToClipboardSafe } from "@/lib/utils";
 import Link from "next/link";
+import { useAppSelector } from "@/redux/hooks";
+import { RootState } from "@/redux/store";
 import {
   Wallet,
   Trophy,
@@ -32,6 +34,7 @@ import {
 } from "lucide-react";
 
 export const AffiliateSection: React.FC = () => {
+  const { user } = useAppSelector((state: RootState) => state.user);
   const [copied, setCopied] = useState(false);
 
   const { data: walletData, isLoading: isWalletLoading } = useGetMyWalletQuery();
@@ -41,7 +44,7 @@ export const AffiliateSection: React.FC = () => {
   const { data: leaderboardData } = useGetLeaderboardQuery({ limit: 5 });
   const { data: txData } = useGetWalletTransactionsQuery({ limit: 5 });
 
-  const wallet = walletData?.data?.wallet;
+  const wallet = walletData?.data?.wallet || walletData?.data;
   const stats = statsData?.data;
   const links = linksData?.data?.links || [];
   const contests = contestsData?.data?.contests || [];
@@ -49,10 +52,15 @@ export const AffiliateSection: React.FC = () => {
   const transactions = txData?.data?.transactions || [];
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const shareCode = links?.[0]?.code || (wallet ? `REF${String(wallet.user).slice(-6).toUpperCase()}` : "JOINNOW");
-  const referralUrl = `${origin}/?ref=${shareCode}`;
+  const userIdStr = (wallet?.user || (user as any)?._id) ? String(wallet?.user || (user as any)?._id) : "";
+  const shareCode = links.find((l: any) => l.type === "store" && l.isActive)?.code || links?.[0]?.code || (userIdStr ? `REF${userIdStr.slice(-6).toUpperCase()}` : "");
+  const referralUrl = shareCode ? `${origin}/?ref=${shareCode}` : "";
 
   const copyLink = async () => {
+    if (!referralUrl) {
+      toast.error("Referral link is still loading, please wait...");
+      return;
+    }
     await copyToClipboardSafe(referralUrl);
     setCopied(true);
     toast.success("Affiliate referral link copied!");
@@ -60,6 +68,10 @@ export const AffiliateSection: React.FC = () => {
   };
 
   const shareWhatsApp = () => {
+    if (!referralUrl) {
+      toast.error("Referral link is still loading, please wait...");
+      return;
+    }
     const text = `Shop with exclusive discounts on Aura Store: ${referralUrl}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
   };
@@ -120,7 +132,7 @@ export const AffiliateSection: React.FC = () => {
           </CardHeader>
           <CardContent className="p-3.5 pt-1">
             <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">
-              ₹{(wallet?.lifetimeEarnings || stats?.totalEarnings || 0).toLocaleString()}
+              ₹{(wallet?.lifetimeEarnings ?? stats?.lifetimeEarnings ?? stats?.totalCommission ?? 0).toLocaleString()}
             </p>
             <p className="text-[10px] text-slate-400">Accumulated rewards</p>
           </CardContent>
@@ -135,7 +147,7 @@ export const AffiliateSection: React.FC = () => {
           </CardHeader>
           <CardContent className="p-3.5 pt-1">
             <p className="text-xl font-black text-slate-900 dark:text-white">
-              {stats?.totalOrders || stats?.conversions || 0}
+              {stats?.totalPurchases ?? stats?.totalOrders ?? stats?.conversions ?? 0}
             </p>
             <p className="text-[10px] text-slate-400">{stats?.totalClicks || 0} link clicks</p>
           </CardContent>
@@ -150,7 +162,7 @@ export const AffiliateSection: React.FC = () => {
           </CardHeader>
           <CardContent className="p-3.5 pt-1">
             <p className="text-xl font-black text-orange-600 dark:text-orange-400">
-              ₹{(wallet?.pendingCommission || stats?.pendingEarnings || 0).toLocaleString()}
+              ₹{(wallet?.pendingBalance ?? stats?.pendingBalance ?? wallet?.pendingCommission ?? 0).toLocaleString()}
             </p>
             <p className="text-[10px] text-slate-400">Holding in return period</p>
           </CardContent>
@@ -172,14 +184,15 @@ export const AffiliateSection: React.FC = () => {
           <input
             type="text"
             readOnly
-            value={referralUrl}
+            value={referralUrl || "Loading your link..."}
             className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold select-all focus:outline-none"
           />
           <div className="flex gap-2">
             <Button
               size="sm"
+              disabled={!referralUrl}
               onClick={copyLink}
-              className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 flex-1 sm:flex-none"
+              className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 flex-1 sm:flex-none disabled:opacity-50"
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copied" : "Copy Link"}
@@ -187,8 +200,9 @@ export const AffiliateSection: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
+              disabled={!referralUrl}
               onClick={shareWhatsApp}
-              className="rounded-xl text-xs border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 flex items-center gap-1.5"
+              className="rounded-xl text-xs border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 flex items-center gap-1.5 disabled:opacity-50"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp
             </Button>
@@ -310,7 +324,7 @@ export const AffiliateSection: React.FC = () => {
               <div className="p-6 text-center text-slate-500">No transactions recorded yet.</div>
             ) : (
               transactions.map((tx: any) => {
-                const isCredit = ["commission", "refund", "credit", "contest_prize"].includes(tx.type);
+                const isCredit = ["commission", "refund", "credit", "admin_credit", "bonus", "contest_reward", "contest_prize"].includes(tx.type) && tx.amount >= 0;
                 return (
                   <div key={tx._id} className="p-3.5 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -329,7 +343,7 @@ export const AffiliateSection: React.FC = () => {
 
                     <div className="text-right">
                       <span className={`font-black ${isCredit ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
-                        {isCredit ? "+" : "-"}₹{tx.amount?.toLocaleString()}
+                        {isCredit ? "+" : "-"}₹{Math.abs(tx.amount || 0).toLocaleString()}
                       </span>
                       <p className="text-[10px] text-slate-400">Bal: ₹{tx.balanceAfter?.toLocaleString() || "-"}</p>
                     </div>

@@ -1,31 +1,68 @@
 import { Metadata } from 'next';
 import Home from '@/components/home/Home';
+import {
+  fetchActiveHomeData,
+  buildHomeMetadata,
+  getSiteUrl,
+  optimizeOgImageUrl,
+} from '@/lib/seo-utils';
 
-export const metadata: Metadata = {
-  title: 'Home | E-Commerce Store',
-  description: 'Discover amazing products at unbeatable prices',
-};
-
-
-async function getHomeData() {
-  try {
-    const url = `${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000/api/v1'}/home`;
-    const res = await fetch(url, { next: { revalidate: 60 } });
-
-    if (!res.ok) {
-      return null;
-    }
-
-    const data = await res.json();
-    // Transform match: response.setHomePageData || response.data
-    return data?.setHomePageData || data?.data;
-  } catch (error) {
-    return null;
-  }
+export async function generateMetadata(): Promise<Metadata> {
+  const data = await fetchActiveHomeData();
+  return buildHomeMetadata(data, '/');
 }
 
-
 export default async function HomePage() {
-  const data = await getHomeData();
-  return <Home initialData={data} />;
+  const data = await fetchActiveHomeData();
+  const siteUrl = getSiteUrl();
+  const seo = data?.seo || {};
+  const storeName = data?.storeName || seo.title || 'E-Commerce Store';
+  const description =
+    seo.description ||
+    seo.metaDescription ||
+    'Shop the latest trends in electronics, fashion, and home goods at unbeatable prices.';
+  const logoUrl =
+    typeof data?.headerLogo === 'object'
+      ? data?.headerLogo?.url
+      : data?.headerLogo;
+  const ogImageUrl = optimizeOgImageUrl(seo.ogImage);
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${siteUrl}/#organization`,
+        name: storeName,
+        url: siteUrl,
+        ...(logoUrl ? { logo: { '@type': 'ImageObject', url: logoUrl } } : {}),
+        ...(ogImageUrl ? { image: ogImageUrl } : {}),
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${siteUrl}/#website`,
+        url: siteUrl,
+        name: storeName,
+        description,
+        publisher: {
+          '@id': `${siteUrl}/#organization`,
+        },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${siteUrl}/product?search={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <Home initialData={data} />
+    </>
+  );
 }

@@ -12,13 +12,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Users, Store, Plug, Bell, Shield, CreditCard, Mail, BarChart3, Save, Loader2, Truck, Coins, User, Camera, Sparkles, Bot, Zap } from "lucide-react"
-import { useGetAppSettingsQuery, useUpdateAppSettingsMutation, useGetAllUsersQuery, useUpdateUserRoleMutation } from "@/redux/api/adminApi"
+import { Users, Store, Plug, Bell, Shield, CreditCard, Mail, BarChart3, Save, Loader2, Truck, Coins, User, Camera, Sparkles, Bot, Zap, FileText, Building2, CheckCircle2, AlertCircle } from "lucide-react"
+import { useGetAppSettingsQuery, useUpdateAppSettingsMutation, useGetAllUsersQuery } from "@/redux/api/adminApi"
 import { useUpdateProfileMutation } from "@/redux/api/userApi"
 import { useAppSelector } from "@/redux/hooks"
 import toast from "react-hot-toast"
 import SettingsHeader from "./settings-header"
+import PrivacyRequestsPanel from "./privacy-requests-panel"
+import { INDIAN_STATES_GST, validateGSTIN, extractStateFromGSTIN, extractPanFromGSTIN } from "@/lib/gst-utils"
 
 const integrations = [
   { name: "Stripe", type: "Payment", status: "Connected", icon: CreditCard },
@@ -36,20 +39,23 @@ export default function SettingsTabs() {
   const { data: settings, isLoading: isSettingsLoading } = useGetAppSettingsQuery()
   const [updateSettings, { isLoading: isUpdating }] = useUpdateAppSettingsMutation()
   const { data: users, isLoading: isUsersLoading } = useGetAllUsersQuery()
-  const [updateUserRole] = useUpdateUserRoleMutation()
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation()
 
   const [formData, setFormData] = useState({
     codMinimumAmount: 0,
     codEnabled: true,
+    partialCodEnabled: false,
+    partialCodType: "fixed" as "fixed" | "percentage",
+    partialCodAmount: 500,
+    partialCodMinOrderAmount: 0,
     deliveryCharges: 40,
     freeDeliveryThreshold: 500,
     termsAndConditions: "",
     storeName: "My E-commerce Store",
     storeUrl: "https://mystore.com",
-    currency: "usd",
-    timezone: "utc",
-    coinEarnRate: 0.1,
+    currency: "inr",
+    timezone: "ist",
+    coinEarnRate: 10,
     coinValue: 1,
     helpLineNumber: "",
     supportEmail: "",
@@ -76,10 +82,29 @@ export default function SettingsTabs() {
     whatsappPhoneNumberId: "",
     whatsappVerifyToken: "",
     whatsappAppSecret: "",
-    taxEnabled: false,
+    taxEnabled: true,
     taxRate: 0,
     gstRate: 18,
+    shippingGstRate: 18,
+    taxPricingMode: "inclusive" as "inclusive" | "exclusive",
     gatewayFeeRate: 2,
+    isGstRegistered: true,
+    companyLegalName: "Aura Store Retail Pvt. Ltd.",
+    companyAddress: "Plot No. 42, Commercial Complex, Okhla Industrial Area, Phase-III",
+    companyCity: "New Delhi",
+    companyState: "Delhi",
+    companyStateCode: "07",
+    companyPincode: "110020",
+    companyCountry: "India",
+    gstin: "07AABCS1429B1ZW",
+    cin: "U72900DL2024PTC123456",
+    panNumber: "AABCS1429B",
+    defaultHsnCode: "9506",
+    authorizedSignatoryName: "Finance & Accounts Dept.",
+    authorizedSignatoryTitle: "Authorized Signatory",
+    invoicePrefix: "INV-",
+    isDigitalSignatureEnabled: true,
+    authorizedSignatureImage: "",
     shippingProvider: "manual" as "manual" | "shiprocket" | "delhivery",
     shiprocketEnabled: false,
     shiprocketEmail: "",
@@ -91,7 +116,12 @@ export default function SettingsTabs() {
     defaultBoxLength: 20,
     defaultBoxBreadth: 15,
     defaultBoxHeight: 10,
-    defaultBoxWeight: 0.5
+    defaultBoxWeight: 0.5,
+    showCookieBanner: false,
+    grievanceOfficerName: "Data Protection & Grievance Officer",
+    grievanceOfficerEmail: "privacy@aurastore.in",
+    grievanceOfficerPhone: "",
+    dpdpPolicyVersion: "v1.0",
   })
 
   const [profileData, setProfileData] = useState({
@@ -107,12 +137,23 @@ export default function SettingsTabs() {
         ...prev,
         ...settings,
         // Ensure defaults if missing from API
+        storeName: settings.storeName || prev.storeName || "My E-commerce Store",
+        storeUrl: settings.storeUrl || prev.storeUrl || "https://mystore.com",
+        currency: settings.currency || prev.currency || "inr",
+        timezone: settings.timezone || prev.timezone || "ist",
         codMinimumAmount: settings.codMinimumAmount || 0,
         codEnabled: settings.codEnabled ?? true,
+        partialCodEnabled: settings.partialCodEnabled ?? false,
+        partialCodType: settings.partialCodType || "fixed",
+        partialCodAmount: settings.partialCodAmount ?? 500,
+        partialCodMinOrderAmount: settings.partialCodMinOrderAmount ?? 0,
         deliveryCharges: settings.deliveryCharges || 40,
         freeDeliveryThreshold: settings.freeDeliveryThreshold || 500,
         termsAndConditions: settings.termsAndConditions || "",
-        coinEarnRate: settings.coinEarnRate || 0.1,
+        coinEarnRate: (() => {
+          const raw = Number(settings.coinEarnRate ?? 10);
+          return raw <= 1 && raw > 0 && raw !== 1 ? Math.round(raw * 100) : raw;
+        })(),
         coinValue: settings.coinValue || 1,
         helpLineNumber: settings.helpLineNumber || "",
         supportEmail: settings.supportEmail || "",
@@ -139,10 +180,29 @@ export default function SettingsTabs() {
         whatsappPhoneNumberId: settings.whatsappPhoneNumberId || "",
         whatsappVerifyToken: settings.whatsappVerifyToken || "",
         whatsappAppSecret: settings.whatsappAppSecret || "",
-        taxEnabled: settings.taxEnabled ?? false,
+        taxEnabled: settings.taxEnabled ?? true,
         taxRate: settings.taxRate || 0,
-        gstRate: settings.gstRate || 18,
-        gatewayFeeRate: settings.gatewayFeeRate || 2,
+        gstRate: settings.gstRate ?? 18,
+        shippingGstRate: settings.shippingGstRate ?? 18,
+        taxPricingMode: settings.taxPricingMode || "inclusive",
+        gatewayFeeRate: settings.gatewayFeeRate ?? 2,
+        isGstRegistered: settings.isGstRegistered ?? true,
+        companyLegalName: settings.companyLegalName || "Aura Store Retail Pvt. Ltd.",
+        companyAddress: settings.companyAddress || "Plot No. 42, Commercial Complex, Okhla Industrial Area, Phase-III",
+        companyCity: settings.companyCity || "New Delhi",
+        companyState: settings.companyState || "Delhi",
+        companyStateCode: settings.companyStateCode || "07",
+        companyPincode: settings.companyPincode || "110020",
+        companyCountry: settings.companyCountry || "India",
+        gstin: settings.gstin || "07AABCS1429B1ZW",
+        cin: settings.cin || "",
+        panNumber: settings.panNumber || "AABCS1429B",
+        defaultHsnCode: settings.defaultHsnCode || "9506",
+        authorizedSignatoryName: settings.authorizedSignatoryName || "Finance & Accounts Dept.",
+        authorizedSignatoryTitle: settings.authorizedSignatoryTitle || "Authorized Signatory",
+        invoicePrefix: settings.invoicePrefix || "INV-",
+        isDigitalSignatureEnabled: settings.isDigitalSignatureEnabled ?? true,
+        authorizedSignatureImage: settings.authorizedSignatureImage || "",
         shippingProvider: settings.shippingProvider || "manual",
         shiprocketEnabled: settings.shiprocketEnabled ?? false,
         shiprocketEmail: settings.shiprocketEmail || "",
@@ -154,7 +214,12 @@ export default function SettingsTabs() {
         defaultBoxLength: settings.defaultBoxLength || 20,
         defaultBoxBreadth: settings.defaultBoxBreadth || 15,
         defaultBoxHeight: settings.defaultBoxHeight || 10,
-        defaultBoxWeight: settings.defaultBoxWeight || 0.5
+        defaultBoxWeight: settings.defaultBoxWeight || 0.5,
+        showCookieBanner: settings.showCookieBanner ?? false,
+        grievanceOfficerName: settings.grievanceOfficerName || "Data Protection & Grievance Officer",
+        grievanceOfficerEmail: settings.grievanceOfficerEmail || "privacy@aurastore.in",
+        grievanceOfficerPhone: settings.grievanceOfficerPhone || "",
+        dpdpPolicyVersion: settings.dpdpPolicyVersion || "v1.0",
       }))
     }
   }, [settings])
@@ -193,6 +258,121 @@ export default function SettingsTabs() {
     }))
   }
 
+  // Dynamic currency symbol across form labels
+  const currencySymbol = formData.currency === "usd" ? "$" : formData.currency === "eur" ? "€" : "₹"
+
+  // GSTIN & PAN Auto-uppercase, Auto-detection & Cross-verification
+  const handleGstinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 15)
+
+    let detectedState = formData.companyState
+    let detectedStateCode = formData.companyStateCode
+    if (rawVal.length >= 2) {
+      const stateMatch = extractStateFromGSTIN(rawVal)
+      if (stateMatch) {
+        detectedState = stateMatch.name
+        detectedStateCode = stateMatch.code
+      }
+    }
+
+    let detectedPan = formData.panNumber
+    if (rawVal.length >= 12) {
+      detectedPan = extractPanFromGSTIN(rawVal)
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      gstin: rawVal,
+      companyState: detectedState,
+      companyStateCode: detectedStateCode,
+      panNumber: detectedPan,
+    }))
+  }
+
+  const handlePanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 10)
+    setFormData((prev) => ({
+      ...prev,
+      panNumber: rawVal,
+    }))
+  }
+
+  const gstinValidation = validateGSTIN(formData.gstin)
+  const stateMismatchError =
+    formData.isGstRegistered &&
+    formData.gstin.length >= 2 &&
+    formData.companyStateCode &&
+    formData.gstin.slice(0, 2) !== formData.companyStateCode
+      ? `GSTIN State Code (${formData.gstin.slice(0, 2)}) does not match selected State Code (${formData.companyStateCode})`
+      : null
+  const panMismatchError =
+    formData.isGstRegistered &&
+    formData.gstin.length >= 12 &&
+    formData.panNumber &&
+    formData.gstin.slice(2, 12) !== formData.panNumber
+      ? `PAN (${formData.panNumber}) does not match characters 3–12 of GSTIN (${formData.gstin.slice(2, 12)})`
+      : null
+
+  const handleResetToDefaults = () => {
+    if (
+      typeof window !== "undefined" &&
+      window.confirm("Are you sure you want to reset all store, tax, and legal entity settings to production defaults?")
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        codMinimumAmount: 0,
+        codEnabled: true,
+        partialCodEnabled: false,
+        partialCodType: "fixed",
+        partialCodAmount: 500,
+        partialCodMinOrderAmount: 0,
+        deliveryCharges: 40,
+        freeDeliveryThreshold: 500,
+        termsAndConditions: "Amount charged is non-refundable for COD orders.",
+        storeName: "My E-commerce Store",
+        storeUrl: "https://mystore.com",
+        currency: "inr",
+        timezone: "ist",
+        coinEarnRate: 10,
+        coinValue: 1,
+        helpLineNumber: "",
+        supportEmail: "",
+        orderEmailEnabled: false,
+        maxCoinUsagePercentage: 20,
+        stripeEnabled: false,
+        taxEnabled: true,
+        taxRate: 0,
+        gstRate: 18,
+        shippingGstRate: 18,
+        taxPricingMode: "inclusive",
+        gatewayFeeRate: 2,
+        isGstRegistered: true,
+        companyLegalName: "Aura Store Retail Pvt. Ltd.",
+        companyAddress: "Plot No. 42, Commercial Complex, Okhla Industrial Area, Phase-III",
+        companyCity: "New Delhi",
+        companyState: "Delhi",
+        companyStateCode: "07",
+        companyPincode: "110020",
+        companyCountry: "India",
+        gstin: "07AABCS1429B1ZW",
+        cin: "U72900DL2024PTC123456",
+        panNumber: "AABCS1429B",
+        defaultHsnCode: "9506",
+        authorizedSignatoryName: "Finance & Accounts Dept.",
+        authorizedSignatoryTitle: "Authorized Signatory",
+        invoicePrefix: "INV-",
+        isDigitalSignatureEnabled: true,
+        authorizedSignatureImage: "",
+        showCookieBanner: false,
+        grievanceOfficerName: "Data Protection & Grievance Officer",
+        grievanceOfficerEmail: "privacy@aurastore.in",
+        grievanceOfficerPhone: "",
+        dpdpPolicyVersion: "v1.0",
+      }))
+      toast.success("Settings reset to defaults. Click 'Save Changes' to persist.")
+    }
+  }
+
   const handleSave = async () => {
     try {
       const res = await updateSettings(formData).unwrap()
@@ -214,15 +394,6 @@ export default function SettingsTabs() {
     }
   }
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      const res = await updateUserRole({ id: userId, role: newRole }).unwrap()
-      toast.success(res?.message || "User role updated")
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to update role")
-    }
-  }
-
   if (isSettingsLoading) {
     return (
       <div className="space-y-6">
@@ -234,7 +405,7 @@ export default function SettingsTabs() {
 
   return (
     <div className="space-y-6">
-      <SettingsHeader onSave={handleSave} isUpdating={isUpdating} />
+      <SettingsHeader onSave={handleSave} onReset={handleResetToDefaults} isUpdating={isUpdating} />
 
       <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 sm:gap-2 bg-transparent mb-4">
@@ -247,6 +418,10 @@ export default function SettingsTabs() {
           </TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="privacy" className="gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-indigo-600" />
+            Privacy &amp; Requests
+          </TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
@@ -345,19 +520,12 @@ export default function SettingsTabs() {
                         </td>
                         <td className="py-3 px-4">{user.email}</td>
                         <td className="py-3 px-4">
-                          <Select
-                            defaultValue={user.role}
-                            onValueChange={(val) => handleRoleChange(user._id, val)}
+                          <Badge
+                            variant={user.role === "admin" ? "default" : "secondary"}
+                            className="capitalize text-xs font-medium"
                           >
-                            <SelectTrigger className="w-28 h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="seller">Seller</SelectItem>
-                              <SelectItem value="user">User</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            {user.role || "user"}
+                          </Badge>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-wrap gap-1">
@@ -398,12 +566,22 @@ export default function SettingsTabs() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="store-name">Store Name</Label>
-                  <Input id="store-name" value={formData.storeName} onChange={handleInputChange} />
+                  <Label htmlFor="storeName">Store Name</Label>
+                  <Input
+                    id="storeName"
+                    value={formData.storeName}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Aura Store"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="store-url">Store URL</Label>
-                  <Input id="store-url" value={formData.storeUrl} onChange={handleInputChange} />
+                  <Label htmlFor="storeUrl">Store URL</Label>
+                  <Input
+                    id="storeUrl"
+                    value={formData.storeUrl}
+                    onChange={handleInputChange}
+                    placeholder="e.g. https://mystore.com"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -413,9 +591,9 @@ export default function SettingsTabs() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="usd">USD - US Dollar</SelectItem>
-                        <SelectItem value="inr">INR - Rupee</SelectItem>
-                        <SelectItem value="eur">EUR - Euro</SelectItem>
+                        <SelectItem value="inr">INR - Indian Rupee (₹)</SelectItem>
+                        <SelectItem value="usd">USD - US Dollar ($)</SelectItem>
+                        <SelectItem value="eur">EUR - Euro (€)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -426,8 +604,8 @@ export default function SettingsTabs() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="ist">Asia/Kolkata (IST)</SelectItem>
                         <SelectItem value="utc">UTC</SelectItem>
-                        <SelectItem value="ist">IST - India</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -469,28 +647,6 @@ export default function SettingsTabs() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Email Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="brevoApiKey">Brevo API Key</Label>
-                  <Input
-                    id="brevoApiKey"
-                    type="password"
-                    value={formData.brevoApiKey}
-                    onChange={handleInputChange}
-                    placeholder="xkeysib-xxxxxxxx................"
-                  />
-                  <p className="text-xs text-muted-foreground">Enter your Brevo API key for transactional emails. Note: Legacy SMTP settings have been deprecated in favor of native API.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
                   <CreditCard className="w-5 h-5" />
                   Payment & COD Settings
                 </CardTitle>
@@ -507,27 +663,94 @@ export default function SettingsTabs() {
                     onCheckedChange={(checked) => handleSwitchChange("codEnabled", checked)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="codMinimumAmount">Minimum Amount for COD (₹)</Label>
-                  <Input
-                    id="codMinimumAmount"
-                    type="number"
-                    value={formData.codMinimumAmount}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 500"
-                  />
-                  <p className="text-xs text-muted-foreground">COD will be disabled if order total is less than this</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="termsAndConditions">COD Terms & Conditions</Label>
-                  <Textarea
-                    id="termsAndConditions"
-                    value={formData.termsAndConditions}
-                    onChange={handleInputChange}
-                    placeholder="Enter T&C for COD..."
-                    className="min-h-[100px]"
-                  />
-                </div>
+
+                {formData.codEnabled && (
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="codMinimumAmount">Minimum Order Amount for COD ({currencySymbol})</Label>
+                      <Input
+                        id="codMinimumAmount"
+                        type="number"
+                        value={formData.codMinimumAmount}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 0 (0 for no limit)"
+                      />
+                      <p className="text-xs text-muted-foreground">COD will be disabled if order total is less than this</p>
+                    </div>
+
+                    <Separator className="my-3" />
+
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <Label htmlFor="partialCodEnabled" className="font-semibold text-base">Advance Deposit COD (Partial COD)</Label>
+                            <Badge variant="secondary" className="bg-primary/20 text-primary border-0 text-xs">Anti-Fake COD</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Jab ye ON hoga toh customer ko full COD ki jagah Advance COD milega (Advance online pay karega, baki delivery par). Fake COD orders rokne ke liye.
+                          </p>
+                        </div>
+                        <Switch
+                          id="partialCodEnabled"
+                          checked={formData.partialCodEnabled}
+                          onCheckedChange={(checked) => handleSwitchChange("partialCodEnabled", checked)}
+                        />
+                      </div>
+
+                      {formData.partialCodEnabled && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="partialCodType">Advance Type</Label>
+                            <Select
+                              value={formData.partialCodType}
+                              onValueChange={(val: "fixed" | "percentage") => setFormData((p) => ({ ...p, partialCodType: val }))}
+                            >
+                              <SelectTrigger id="partialCodType">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fixed">Fixed Amount ({currencySymbol})</SelectItem>
+                                <SelectItem value="percentage">Percentage (%)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">Fixed amount ya order total ka percentage</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="partialCodAmount">
+                              {formData.partialCodType === "percentage" ? "Advance Percentage (%)" : `Advance Amount (${currencySymbol})`}
+                            </Label>
+                            <Input
+                              id="partialCodAmount"
+                              type="number"
+                              value={formData.partialCodAmount}
+                              onChange={handleInputChange}
+                              placeholder={formData.partialCodType === "percentage" ? "e.g. 20" : "e.g. 500"}
+                            />
+                            <p className="text-xs text-muted-foreground">Customer ye advance online pay karega order book karne ke liye</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 pt-2 border-t border-primary/10">
+                        <Label htmlFor="termsAndConditions" className="font-medium">
+                          COD &amp; Advance Terms &amp; Conditions (Refund / Policy Notice)
+                        </Label>
+                        <Textarea
+                          id="termsAndConditions"
+                          value={formData.termsAndConditions}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Advance payment online pay hone ke baad doorstep par order lene se mana karne par advance refund nahi hoga..."
+                          className="min-h-[90px] bg-white dark:bg-slate-900"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Ye notice checkout page par COD option ke sath customer ko dikhai dega.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <Separator className="my-4" />
 
@@ -551,12 +774,12 @@ export default function SettingsTabs() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Truck className="w-5 h-5" />
-                  Shipping & Delivery
+                  Shipping &amp; Delivery
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deliveryCharges">Default Delivery Charges (₹)</Label>
+                  <Label htmlFor="deliveryCharges">Default Delivery Charges ({currencySymbol})</Label>
                   <Input
                     id="deliveryCharges"
                     type="number"
@@ -565,7 +788,7 @@ export default function SettingsTabs() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="freeDeliveryThreshold">Free Delivery Threshold (₹)</Label>
+                  <Label htmlFor="freeDeliveryThreshold">Free Delivery Threshold ({currencySymbol})</Label>
                   <Input
                     id="freeDeliveryThreshold"
                     type="number"
@@ -586,18 +809,21 @@ export default function SettingsTabs() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="coinEarnRate">Coin Earn Rate (0.1 = 10%)</Label>
+                  <Label htmlFor="coinEarnRate">Coin Earn Rate (%)</Label>
                   <Input
                     id="coinEarnRate"
                     type="number"
-                    step="0.01"
+                    step="0.5"
+                    min="0"
+                    max="100"
                     value={formData.coinEarnRate}
                     onChange={handleInputChange}
+                    placeholder="10"
                   />
-                  <p className="text-xs text-muted-foreground">Percentage of order total awarded as coins</p>
+                  <p className="text-xs text-muted-foreground">Percentage of order total awarded as coins (1 = 1%, e.g., 10 for 10%)</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="coinValue">Coin Value (₹)</Label>
+                  <Label htmlFor="coinValue">Coin Value ({currencySymbol})</Label>
                   <Input
                     id="coinValue"
                     type="number"
@@ -623,15 +849,16 @@ export default function SettingsTabs() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Tax & Gateway Preferences
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  Tax &amp; Gateway Preferences
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">GST slabs, checkout tax calculation mode, and gateway profit deductions.</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="taxEnabled">Enable Tax Deductions</Label>
-                    <p className="text-xs text-muted-foreground">Calculate GST & Fees for accurate Net Profit</p>
+                    <Label htmlFor="taxEnabled">Include GST &amp; Gateway Fees in Profit Analytics</Label>
+                    <p className="text-xs text-muted-foreground">Deduct GST and payment gateway charges when calculating Net Profit in analytics.</p>
                   </div>
                   <Switch
                     id="taxEnabled"
@@ -639,27 +866,52 @@ export default function SettingsTabs() {
                     onCheckedChange={(checked) => handleSwitchChange("taxEnabled", checked)}
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="gstRate">GST Rate (%)</Label>
-                  <Input
-                    id="gstRate"
-                    type="number"
-                    value={formData.gstRate}
-                    onChange={handleInputChange}
-                    placeholder="18"
-                  />
+                  <Label htmlFor="taxPricingMode">Tax Pricing Mode</Label>
+                  <Select
+                    value={formData.taxPricingMode}
+                    onValueChange={(val: "inclusive" | "exclusive") => setFormData((p) => ({ ...p, taxPricingMode: val }))}
+                  >
+                    <SelectTrigger id="taxPricingMode">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inclusive">GST Inclusive (Product prices are MRP - Standard in India)</SelectItem>
+                      <SelectItem value="exclusive">GST Exclusive (Add GST on top at checkout)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    In India B2C e-commerce, consumer prices are legally required to be inclusive of all taxes (MRP).
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="taxRate">Additional Tax Rate (%)</Label>
-                  <Input
-                    id="taxRate"
-                    type="number"
-                    value={formData.taxRate}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                  />
-                  <p className="text-xs text-muted-foreground">Extra tax (e.g., local state tax) applied with GST</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gstRate">Default GST Rate (%)</Label>
+                    <Input
+                      id="gstRate"
+                      type="number"
+                      value={formData.gstRate}
+                      onChange={handleInputChange}
+                      placeholder="18"
+                    />
+                    <p className="text-xs text-muted-foreground">Fallback GST slab used when an individual product does not have its own GST rate.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingGstRate">Shipping GST Rate (%)</Label>
+                    <Input
+                      id="shippingGstRate"
+                      type="number"
+                      value={formData.shippingGstRate}
+                      onChange={handleInputChange}
+                      placeholder="18"
+                    />
+                    <p className="text-xs text-muted-foreground">GST slab applicable on shipping and delivery fees (standard: 18%).</p>
+                  </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="gatewayFeeRate">Payment Gateway Fee (%)</Label>
                   <Input
@@ -670,6 +922,299 @@ export default function SettingsTabs() {
                     onChange={handleInputChange}
                     placeholder="2"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Applies only to prepaid online orders (excluded for COD) in Net Profit analytics.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-primary" />
+                      Legal Entity &amp; GST Tax Invoice Details
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Official business registration, GSTIN, and registered address printed on customer Tax Invoices &amp; Delivery Challans.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {formData.isGstRegistered ? "Tax Invoice (GST Registered)" : "Bill of Supply (Unregistered)"}
+                    </span>
+                    <Badge variant={formData.isGstRegistered ? "default" : "secondary"}>
+                      {formData.isGstRegistered ? "GST Active" : "Unregistered"}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="isGstRegistered" className="font-semibold text-base">GST Registered Business</Label>
+                      <Badge variant="outline" className="text-xs">Rule 46 / Rule 49</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      When ON, invoices are titled <strong>&quot;Tax Invoice&quot;</strong> with CGST/SGST/IGST breakdown. When OFF, invoices are titled <strong>&quot;Bill of Supply&quot;</strong> without GST split.
+                    </p>
+                  </div>
+                  <Switch
+                    id="isGstRegistered"
+                    checked={formData.isGstRegistered}
+                    onCheckedChange={(checked) => handleSwitchChange("isGstRegistered", checked)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyLegalName">Company Legal Entity Name</Label>
+                    <Input
+                      id="companyLegalName"
+                      value={formData.companyLegalName}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Aura Store Retail Pvt. Ltd."
+                    />
+                    <p className="text-xs text-muted-foreground">Official registered name of the business entity</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="defaultHsnCode">Default HSN / SAC Code</Label>
+                    <Input
+                      id="defaultHsnCode"
+                      value={formData.defaultHsnCode}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 9506"
+                    />
+                    <p className="text-xs text-muted-foreground">Harmonized System of Nomenclature code for product tax classification</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="companyAddress">Full Registered Office Address</Label>
+                  <Textarea
+                    id="companyAddress"
+                    value={formData.companyAddress}
+                    onChange={handleInputChange}
+                    placeholder="Plot / Office No, Building, Street, Industrial Area"
+                    className="min-h-[70px]"
+                  />
+                  <p className="text-xs text-muted-foreground">Complete street address for official billing &amp; dispatch location</p>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyCity">City</Label>
+                    <Input
+                      id="companyCity"
+                      value={formData.companyCity}
+                      onChange={handleInputChange}
+                      placeholder="New Delhi"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="companyState">State / UT (GST)</Label>
+                    <Select
+                      value={formData.companyStateCode || ""}
+                      onValueChange={(code) => {
+                        const matched = INDIAN_STATES_GST.find((s) => s.code === code)
+                        setFormData((prev) => ({
+                          ...prev,
+                          companyStateCode: code,
+                          companyState: matched ? matched.name : prev.companyState,
+                        }))
+                      }}
+                    >
+                      <SelectTrigger id="companyState">
+                        <SelectValue placeholder="Select State / UT" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {INDIAN_STATES_GST.map((state) => (
+                          <SelectItem key={state.code} value={state.code}>
+                            {state.name} ({state.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="companyStateCode">State Code (GST)</Label>
+                    <Input
+                      id="companyStateCode"
+                      value={formData.companyStateCode}
+                      readOnly
+                      className="bg-muted font-mono font-bold text-center cursor-not-allowed"
+                      placeholder="07"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="companyPincode">PIN Code</Label>
+                    <Input
+                      id="companyPincode"
+                      value={formData.companyPincode}
+                      onChange={handleInputChange}
+                      placeholder="110020"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="gstin">GSTIN (15 Digits)</Label>
+                      {formData.isGstRegistered && formData.gstin.length === 15 && (
+                        gstinValidation.isValid ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3 h-3" /> Valid Checksum
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500">
+                            <AlertCircle className="w-3 h-3" /> Invalid Checksum
+                          </span>
+                        )
+                      )}
+                    </div>
+                    <Input
+                      id="gstin"
+                      value={formData.gstin}
+                      onChange={handleGstinChange}
+                      placeholder="07AABCS1429B1ZW"
+                      className={`font-mono uppercase ${
+                        formData.isGstRegistered && formData.gstin && !gstinValidation.isValid
+                          ? "border-rose-400 focus-visible:ring-rose-400"
+                          : ""
+                      }`}
+                      disabled={!formData.isGstRegistered}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {formData.isGstRegistered
+                        ? "State Code (2) + PAN (10) + Entity (1) + Z + Checksum (1)"
+                        : "Optional when unregistered under GST (Bill of Supply issued)"}
+                    </p>
+                    {formData.isGstRegistered && gstinValidation.error && formData.gstin.length > 0 && (
+                      <p className="text-xs text-rose-500 font-medium">{gstinValidation.error}</p>
+                    )}
+                    {stateMismatchError && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{stateMismatchError}</p>
+                    )}
+                    {panMismatchError && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{panMismatchError}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cin">CIN (Optional — Pvt. Ltd. / LLP only)</Label>
+                    <Input
+                      id="cin"
+                      value={formData.cin}
+                      onChange={handleInputChange}
+                      placeholder="U72900DL2024PTC123456"
+                      className="font-mono uppercase"
+                    />
+                    <p className="text-xs text-muted-foreground">Leave blank for Sole Proprietorships and Partnerships</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="panNumber">PAN Number (10 Digits)</Label>
+                    <Input
+                      id="panNumber"
+                      value={formData.panNumber}
+                      onChange={handlePanChange}
+                      placeholder="AABCS1429B"
+                      className="font-mono uppercase"
+                    />
+                    <p className="text-xs text-muted-foreground">Permanent Account Number (auto-synced from GSTIN)</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
+                    <Input
+                      id="invoicePrefix"
+                      value={formData.invoicePrefix}
+                      onChange={(e) => {
+                        const val = e.target.value.slice(0, 10)
+                        setFormData((p) => ({ ...p, invoicePrefix: val }))
+                      }}
+                      placeholder="INV-"
+                      maxLength={10}
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">Max 10 chars so full invoice number (Prefix + serial) stays within Rule 46&apos;s 16-character limit (e.g. INV/26- or INV-)</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="authorizedSignatoryName">Authorized Signatory Dept / Name</Label>
+                    <Input
+                      id="authorizedSignatoryName"
+                      value={formData.authorizedSignatoryName}
+                      onChange={handleInputChange}
+                      placeholder="Finance &amp; Accounts Dept."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="authorizedSignatoryTitle">Signatory Designation Title</Label>
+                    <Input
+                      id="authorizedSignatoryTitle"
+                      value={formData.authorizedSignatoryTitle}
+                      onChange={handleInputChange}
+                      placeholder="Authorized Signatory"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="isDigitalSignatureEnabled"
+                      checked={formData.isDigitalSignatureEnabled}
+                      onCheckedChange={(checked) =>
+                        setFormData((p) => ({ ...p, isDigitalSignatureEnabled: Boolean(checked) }))
+                      }
+                      className="mt-1"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="isDigitalSignatureEnabled" className="cursor-pointer font-medium">
+                        Computer-generated invoice (no physical signature required)
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Prints official digital seal and clause &quot;* This is a computer-generated invoice and requires no physical signature.&quot; as per Indian IT Act &amp; GST guidelines.
+                      </p>
+                    </div>
+                  </div>
+
+                  {!formData.isDigitalSignatureEnabled && (
+                    <div className="space-y-2 pl-7 pt-2">
+                      <Label htmlFor="authorizedSignatureImage">Authorized Signature Image URL</Label>
+                      <Input
+                        id="authorizedSignatureImage"
+                        value={formData.authorizedSignatureImage}
+                        onChange={handleInputChange}
+                        placeholder="https://example.com/signatures/sign.png"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Transparent PNG of the physical signature to be printed on invoice PDFs.
+                      </p>
+                      {formData.authorizedSignatureImage && (
+                        <div className="mt-2 p-2 border rounded-md inline-block bg-white">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={formData.authorizedSignatureImage}
+                            alt="Signature Preview"
+                            className="h-12 object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1213,6 +1758,22 @@ export default function SettingsTabs() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="privacy">
+          <PrivacyRequestsPanel
+            formData={{
+              showCookieBanner: formData.showCookieBanner,
+              grievanceOfficerName: formData.grievanceOfficerName,
+              grievanceOfficerEmail: formData.grievanceOfficerEmail,
+              grievanceOfficerPhone: formData.grievanceOfficerPhone,
+              dpdpPolicyVersion: formData.dpdpPolicyVersion,
+            }}
+            onInputChange={handleInputChange}
+            onSwitchChange={handleSwitchChange}
+            onSaveSettings={handleSave}
+            isSavingSettings={isUpdating}
+          />
         </TabsContent>
 
         <TabsContent value="security">

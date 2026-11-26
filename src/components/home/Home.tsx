@@ -134,10 +134,18 @@ export default function Home({ initialData }: HomeProps) {
                 {(section.type === "banner1" || section.type === "banner2" || section.type === "banner3") && section.banners && section.banners.length > 0 && (
                   <BannerSection
                     layout={section.type === "banner1" ? "1" : section.type === "banner2" ? "2" : "3"}
-                    banners={section.banners.map((b: any) => ({
-                      image: b.image?.url || b.image,
-                      redirectLink: b.redirectLink || "#"
-                    }))}
+                    banners={section.banners.map((b: any) => {
+                      const img = typeof b.image === 'object' ? b.image?.url : b.image;
+                      const vid = typeof b.video === 'object' ? b.video?.url : b.video;
+                      return {
+                        image: typeof img === 'string' ? img.trim() : '',
+                        video: typeof vid === 'string' ? vid.trim() : '',
+                        title: b.title || '',
+                        subtitle: b.subtitle || '',
+                        ctaText: b.ctaText || 'Shop Now',
+                        redirectLink: b.redirectLink || "#"
+                      };
+                    })}
                   />
                 )}
 

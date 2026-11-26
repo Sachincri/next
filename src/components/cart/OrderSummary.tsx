@@ -40,10 +40,22 @@ export function OrderSummary() {
 
   // Sync resolved address back to Redux so Payment page has it immediately
   useEffect(() => {
-    if (address && (!shippingInfo || !shippingInfo.address)) {
-      dispatch(addShippingInfo(address));
+    if (address && (!shippingInfo || !shippingInfo.address || shippingInfo.address.trim().length === 0)) {
+      const fullName = address.name || [address.firstName, address.lastName].filter(Boolean).join(' ') || user?.name || 'Customer';
+      dispatch(addShippingInfo({
+        name: fullName,
+        firstName: address.firstName || fullName.split(' ')[0] || 'Customer',
+        lastName: address.lastName || fullName.split(' ').slice(1).join(' ') || '',
+        email: address.email || user?.email || '',
+        address: address.address || address.streetAddress || '',
+        city: address.city || '',
+        state: address.state || '',
+        country: address.country || 'India',
+        pinCode: Number(address.pinCode || address.pincode || 0),
+        phoneNo: Number(address.phoneNo || address.phone || 0),
+      } as any));
     }
-  }, [address, shippingInfo, dispatch]);
+  }, [address, shippingInfo, user, dispatch]);
 
   const priceDetails = summary?.priceDetails;
   const totalAmount = priceDetails?.totalAmount || 0;

@@ -232,7 +232,7 @@ export default function AdminAffiliatesPage() {
         prizes,
         prizeAmount: totalPrizeAmount > 0 ? totalPrizeAmount : (Number(prizePool) || 5000),
         targetOrders: 50,
-        minPurchaseAmount: Number(minThreshold) || 2000,
+        minPurchaseAmount: minThreshold.trim() !== "" ? Number(minThreshold) : 2000,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
       }).unwrap();
@@ -641,7 +641,7 @@ export default function AdminAffiliatesPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                   {transactions.map((tx: any) => {
-                    const isCredit = ["commission", "refund", "credit", "contest_prize"].includes(tx.type);
+                    const isCredit = ["commission", "refund", "credit", "admin_credit", "bonus", "contest_reward", "contest_prize"].includes(tx.type) && tx.amount >= 0;
                     return (
                       <tr key={tx._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                         <td className="p-3.5 pl-5 text-slate-400 whitespace-nowrap">
@@ -657,7 +657,7 @@ export default function AdminAffiliatesPage() {
                           <p className="text-[10px] text-slate-400 truncate max-w-xs">{tx.description}</p>
                         </td>
                         <td className={`p-3.5 font-black ${isCredit ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
-                          {isCredit ? "+" : "-"}₹{tx.amount?.toLocaleString()}
+                          {isCredit ? "+" : "-"}₹{Math.abs(tx.amount || 0).toLocaleString()}
                         </td>
                         <td className="p-3.5 font-mono text-slate-500">₹{tx.balanceAfter?.toLocaleString() || "-"}</td>
                         <td className="p-3.5 pr-5">

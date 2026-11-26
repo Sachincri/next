@@ -225,9 +225,13 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
       case 'delivered': return 3;
       case 'shipped': return 2;
       case 'processing': return 1;
-      case 'ordered': return 0;
+      case 'ordered':
+      case 'placed':
+      case 'new':
+      case 'pending': return 0;
       case 'refunded': return 4;
-      case 'cancelled': return 0;
+      case 'cancelled':
+      case 'canceled': return 0;
       default: return 0;
     }
   };

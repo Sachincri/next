@@ -36,8 +36,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useAppSelector } from "@/redux/hooks";
+import { RootState } from "@/redux/store";
 
 export default function EarnAffiliatePage() {
+  const { user } = useAppSelector((state: RootState) => state.user);
   const [copied, setCopied] = useState(false);
   const [customCode, setCustomCode] = useState("");
 
@@ -51,7 +54,7 @@ export default function EarnAffiliatePage() {
 
   const [createShareLink, { isLoading: isCreatingLink }] = useCreateShareLinkMutation();
 
-  const wallet = walletData?.data?.wallet;
+  const wallet = walletData?.data?.wallet || walletData?.data;
   const stats = statsData?.data;
   const links = linksData?.data?.links || [];
   const transactions = txData?.data?.transactions || [];
@@ -61,10 +64,15 @@ export default function EarnAffiliatePage() {
   const referralSummary = referralsData?.data?.summary || {};
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://aura-store.com";
-  const defaultShareCode = links?.[0]?.code || (wallet ? `REF${String(wallet.user).slice(-6).toUpperCase()}` : "JOINNOW");
-  const referralUrl = `${origin}/?ref=${defaultShareCode}`;
+  const userIdStr = (wallet?.user || (user as any)?._id) ? String(wallet?.user || (user as any)?._id) : "";
+  const defaultShareCode = links.find((l: any) => l.type === "store" && l.isActive)?.code || links?.[0]?.code || (userIdStr ? `REF${userIdStr.slice(-6).toUpperCase()}` : "");
+  const referralUrl = defaultShareCode ? `${origin}/?ref=${defaultShareCode}` : "";
 
   const copyToClipboard = async (url: string) => {
+    if (!url) {
+      toast.error("Referral link is still loading, please wait...");
+      return;
+    }
     await copyToClipboardSafe(url);
     setCopied(true);
     toast.success("Referral link copied to clipboard!");
@@ -73,8 +81,15 @@ export default function EarnAffiliatePage() {
 
   const handleCreateCustomLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!customCode.trim()) {
+      toast.error("Please enter a custom alias (3-20 alphanumeric characters)");
+      return;
+    }
     try {
-      await createShareLink({ customCode: customCode ? customCode.trim() : undefined }).unwrap();
+      await createShareLink({
+        type: "store",
+        customCode: customCode.trim(),
+      }).unwrap();
       toast.success("Affiliate share link created!");
       setCustomCode("");
       refetchLinks();
@@ -131,7 +146,7 @@ export default function EarnAffiliatePage() {
             </CardHeader>
             <CardContent className="p-4 pt-1">
               <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                ₹{(wallet?.lifetimeEarnings || stats?.totalEarnings || 0).toLocaleString()}
+                ₹{(wallet?.lifetimeEarnings ?? stats?.lifetimeEarnings ?? stats?.totalCommission ?? 0).toLocaleString()}
               </p>
               <p className="text-[11px] text-slate-400 mt-1">All-time rewards accumulated</p>
             </CardContent>
@@ -146,7 +161,7 @@ export default function EarnAffiliatePage() {
             </CardHeader>
             <CardContent className="p-4 pt-1">
               <p className="text-2xl font-black text-slate-900 dark:text-white">
-                {stats?.totalOrders || stats?.conversions || 0}
+                {stats?.totalPurchases ?? stats?.totalOrders ?? stats?.conversions ?? 0}
               </p>
               <p className="text-[11px] text-slate-400 mt-1">{stats?.totalClicks || 0} total link clicks</p>
             </CardContent>
@@ -161,7 +176,7 @@ export default function EarnAffiliatePage() {
             </CardHeader>
             <CardContent className="p-4 pt-1">
               <p className="text-2xl font-black text-orange-600 dark:text-orange-400">
-                ₹{(wallet?.pendingCommission || stats?.pendingEarnings || 0).toLocaleString()}
+                ₹{(wallet?.pendingBalance ?? stats?.pendingBalance ?? wallet?.pendingCommission ?? 0).toLocaleString()}
               </p>
               <p className="text-[11px] text-slate-400 mt-1">Releases after return period</p>
             </CardContent>
@@ -183,13 +198,14 @@ export default function EarnAffiliatePage() {
             <input
               type="text"
               readOnly
-              value={referralUrl}
+              value={referralUrl || "Loading your link..."}
               className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 w-full sm:w-72 select-all focus:outline-none"
             />
             <Button
               size="sm"
+              disabled={!referralUrl}
               onClick={() => copyToClipboard(referralUrl)}
-              className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 flex-shrink-0"
+              className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50"
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copied!" : "Copy"}
@@ -242,7 +258,7 @@ export default function EarnAffiliatePage() {
 
                         <div className="text-right sm:self-center">
                           <span className="text-[10px] text-slate-400 uppercase font-semibold">Prize Pool</span>
-                          <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">₹{c.prizePool?.toLocaleString() || "5,000"}</p>
+                          <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">₹{(c.prizeAmount ?? c.prizePool ?? 0).toLocaleString()}</p>
                         </div>
                       </div>
 
@@ -383,7 +399,7 @@ export default function EarnAffiliatePage() {
                 ) : (
                   <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                     {transactions.map((tx: any) => {
-                      const isCredit = ["commission", "refund", "credit", "contest_prize"].includes(tx.type);
+                      const isCredit = ["commission", "refund", "credit", "admin_credit", "bonus", "contest_reward", "contest_prize"].includes(tx.type) && tx.amount >= 0;
                       return (
                         <div key={tx._id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/40">
                           <div className="flex items-center gap-3">
@@ -410,7 +426,7 @@ export default function EarnAffiliatePage() {
 
                           <div className="text-right">
                             <p className={`font-black text-sm ${isCredit ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
-                              {isCredit ? "+" : "-"}₹{tx.amount?.toLocaleString()}
+                              {isCredit ? "+" : "-"}₹{Math.abs(tx.amount || 0).toLocaleString()}
                             </p>
                             <p className="text-[10px] text-slate-400 font-mono">
                               Bal: ₹{tx.balanceAfter?.toLocaleString() || "-"}
@@ -472,16 +488,25 @@ export default function EarnAffiliatePage() {
                       </tr>
                     ) : (
                       links.map((link: any) => {
-                        const linkUrl = `${origin}/?ref=${link.code}`;
+                        const prodId = typeof link.product === "object" ? link.product?._id : link.product;
+                        const linkUrl =
+                          link.type === "product" && prodId
+                            ? `${origin}/product/${prodId}?ref=${link.code}`
+                            : `${origin}/?ref=${link.code}`;
                         return (
                           <tr key={link._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50">
                             <td className="p-3.5 pl-5 font-mono font-bold text-indigo-600 dark:text-indigo-400">
                               {link.code}
+                              {link.product?.name && (
+                                <span className="block font-sans font-normal text-[10px] text-slate-400 truncate max-w-[180px]">
+                                  {link.product.name}
+                                </span>
+                              )}
                             </td>
                             <td className="p-3.5 font-bold text-slate-700 dark:text-slate-300">{link.clicks || 0}</td>
-                            <td className="p-3.5 font-bold text-emerald-600">{link.conversions || 0}</td>
+                            <td className="p-3.5 font-bold text-emerald-600">{link.purchases ?? link.conversions ?? 0}</td>
                             <td className="p-3.5 font-extrabold text-slate-900 dark:text-white">
-                              ₹{(link.earnings || 0).toLocaleString()}
+                              ₹{(link.totalCommission ?? link.earnings ?? 0).toLocaleString()}
                             </td>
                             <td className="p-3.5 text-slate-400">
                               {new Date(link.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}

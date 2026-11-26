@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
 import { Button } from "@/ui/button"
 import { Input } from "@/ui/input"
 import { Badge } from "@/ui/badge"
+import { Checkbox } from "@/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/dropdown-menu"
-import { Search, MoreHorizontal, Eye, Edit, Mail, ChevronLeft, ChevronRight, Trash2, Coins, Ticket } from "lucide-react"
+import { Search, MoreHorizontal, Eye, Edit, Mail, ChevronLeft, ChevronRight, Trash2, Coins, Ticket, Download, UserCheck, X } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,8 @@ import {
 } from "@/ui/alert-dialog"
 import CustomerDetailModal from "./customer-detail-modal"
 import AssignCouponModal from "./assign-coupon-modal"
-import { useGetAllUsersQuery, useDeleteUserMutation, useUpdateUserRoleMutation } from "@/redux/api/adminApi"
+import { useGetAllUsersQuery, useDeleteUserMutation, useUpdateUserRoleMutation, useBulkCustomerActionMutation } from "@/redux/api/adminApi"
+import { exportCustomersToCSV } from "@/utils/csvHelper"
 import toast from "react-hot-toast"
 
 export default function CustomersTable() {
@@ -30,6 +32,7 @@ export default function CustomersTable() {
   })
   const [deleteUser] = useDeleteUserMutation()
   const [updateUserRole] = useUpdateUserRoleMutation()
+  const [bulkCustomerAction, { isLoading: isBulkLoading }] = useBulkCustomerActionMutation()
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -56,6 +59,11 @@ export default function CustomersTable() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
   const [showCustomerDetail, setShowCustomerDetail] = useState(false)
   const [showAssignCoupon, setShowAssignCoupon] = useState(false)
+
+  // Selection & Bulk State
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([])
+  const [coinsModalOpen, setCoinsModalOpen] = useState(false)
+  const [bonusCoinsAmount, setBonusCoinsAmount] = useState("100")
 
   // Alert Dialog State
   const [alertOpen, setAlertOpen] = useState(false)
@@ -124,6 +132,85 @@ export default function CustomersTable() {
     setAlertOpen(true)
   }
 
+  const handleSelectCustomer = (id: string) => {
+    setSelectedCustomers((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAll = () => {
+    setSelectedCustomers(
+      selectedCustomers.length === paginatedCustomers.length && paginatedCustomers.length > 0
+        ? []
+        : paginatedCustomers.map((c: any) => c._id)
+    )
+  }
+
+  const handleBulkRoleChange = async (role: string) => {
+    if (selectedCustomers.length === 0) return
+    try {
+      const res = await bulkCustomerAction({
+        userIds: selectedCustomers,
+        action: "role",
+        data: { role },
+      }).unwrap()
+      toast.success(res?.message || `Updated roles for ${selectedCustomers.length} customer(s)`)
+      setSelectedCustomers([])
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to update customer roles")
+    }
+  }
+
+  const handleBulkCoinsSubmit = async () => {
+    const coinsNum = Number(bonusCoinsAmount)
+    if (isNaN(coinsNum) || coinsNum === 0) {
+      toast.error("Please enter a valid coin amount")
+      return
+    }
+    try {
+      const res = await bulkCustomerAction({
+        userIds: selectedCustomers,
+        action: "coins",
+        data: { coins: coinsNum },
+      }).unwrap()
+      toast.success(res?.message || `Added ${coinsNum} coins to ${selectedCustomers.length} customer(s)`)
+      setSelectedCustomers([])
+      setCoinsModalOpen(false)
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to update coins")
+    }
+  }
+
+  const handleBulkDeleteClick = () => {
+    if (selectedCustomers.length === 0) return
+    setAlertData({
+      title: "Delete Selected Customers",
+      description: `Are you sure you want to permanently delete ${selectedCustomers.length} selected customer(s)? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const res = await bulkCustomerAction({
+            userIds: selectedCustomers,
+            action: "delete",
+          }).unwrap()
+          toast.success(res?.message || `Deleted ${selectedCustomers.length} customer(s)`)
+          setSelectedCustomers([])
+        } catch (err: any) {
+          toast.error(err?.data?.message || "Failed to delete customers")
+        }
+      },
+    })
+    setAlertOpen(true)
+  }
+
+  const handleExportView = () => {
+    if (filteredCustomers.length === 0) {
+      toast.error("No customers found to export")
+      return
+    }
+    exportCustomersToCSV(filteredCustomers, `customers_view_${new Date().toISOString().slice(0, 10)}.csv`)
+    toast.success(`Exported ${filteredCustomers.length} customer(s) from current view`)
+  }
+
   const filteredCustomers = (users || []).filter((customer) => {
     // 1. Search Filter
     const searchLower = localSearch.toLowerCase()
@@ -174,16 +261,88 @@ export default function CustomersTable() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle className="text-lg font-semibold">Customers ({filteredCustomers.length})</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg font-semibold">Customers ({filteredCustomers.length})</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleExportView}
+                title="Export filtered customers to CSV"
+              >
+                <Download className="w-3.5 h-3.5 mr-1" />
+                Export View
+              </Button>
+            </div>
 
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customers..."
-                value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              {selectedCustomers.length > 0 && (
+                <div className="flex items-center gap-2 bg-muted/60 p-1.5 rounded-lg border border-border">
+                  <span className="text-xs font-medium px-2">{selectedCustomers.length} selected</span>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 text-xs" disabled={isBulkLoading}>
+                        <UserCheck className="w-3.5 h-3.5 mr-1.5" />
+                        Role
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleBulkRoleChange("user")}>
+                        Set as Customer (User)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleBulkRoleChange("seller")}>
+                        Set as Seller
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleBulkRoleChange("admin")}>
+                        Set as Admin
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs text-amber-600 hover:text-amber-700"
+                    onClick={() => setCoinsModalOpen(true)}
+                    disabled={isBulkLoading}
+                  >
+                    <Coins className="w-3.5 h-3.5 mr-1.5" />
+                    Coins
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                    onClick={handleBulkDeleteClick}
+                    disabled={isBulkLoading}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    Delete
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs px-2 text-muted-foreground"
+                    onClick={() => setSelectedCustomers([])}
+                    title="Clear selection"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers..."
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  className="pl-10 h-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -196,6 +355,12 @@ export default function CustomersTable() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 w-10">
+                      <Checkbox
+                        checked={selectedCustomers.length === paginatedCustomers.length && paginatedCustomers.length > 0}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </th>
                     <th className="text-left py-3 px-4 font-medium text-muted-foreground whitespace-nowrap">Customer</th>
                     <th className="text-left py-3 px-4 font-medium text-muted-foreground whitespace-nowrap">Date Registered</th>
                     <th className="text-left py-3 px-4 font-medium text-muted-foreground whitespace-nowrap">Role</th>
@@ -209,13 +374,19 @@ export default function CustomersTable() {
                   {paginatedCustomers.map((customer) => (
                     <tr key={customer._id} className="border-b border-border hover:bg-muted/50">
                       <td className="py-3 px-4">
+                        <Checkbox
+                          checked={selectedCustomers.includes(customer._id)}
+                          onCheckedChange={() => handleSelectCustomer(customer._id)}
+                        />
+                      </td>
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8">
                             <AvatarImage src={customer.avatar?.url || "/placeholder.svg"} alt={customer.name} />
                             <AvatarFallback>
                               {customer.name
                                 .split(" ")
-                                .map((n) => n[0])
+                                .map((n: string) => n[0])
                                 .join("")}
                             </AvatarFallback>
                           </Avatar>
@@ -273,7 +444,7 @@ export default function CustomersTable() {
                   ))}
                   {filteredCustomers.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-muted-foreground text-sm">No users found</td>
+                      <td colSpan={8} className="text-center py-10 text-muted-foreground text-sm">No users found</td>
                     </tr>
                   )}
                 </tbody>
@@ -283,17 +454,30 @@ export default function CustomersTable() {
 
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredCustomers.length} of {users?.length || 0} users
+              Showing {filteredCustomers.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} users
             </p>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>
-                <ChevronLeft className="w-4 h-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
                 Previous
               </Button>
-              <Button variant="outline" size="sm" disabled>
+              <span className="text-xs text-muted-foreground px-2">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
                 Next
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
@@ -303,6 +487,35 @@ export default function CustomersTable() {
       <CustomerDetailModal customer={selectedCustomer} open={showCustomerDetail} onOpenChange={setShowCustomerDetail} />
       <AssignCouponModal customer={selectedCustomer} open={showAssignCoupon} onOpenChange={setShowAssignCoupon} />
 
+      {/* Bulk Coins Modal */}
+      <AlertDialog open={coinsModalOpen} onOpenChange={setCoinsModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add Bonus Reward Coins</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter the amount of coins to add to the {selectedCustomers.length} selected customer(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-3">
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Coins Amount</label>
+            <Input
+              type="number"
+              value={bonusCoinsAmount}
+              onChange={(e) => setBonusCoinsAmount(e.target.value)}
+              placeholder="e.g. 100"
+              className="w-full"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkCoinsSubmit} className="bg-amber-600 hover:bg-amber-700">
+              Apply Coins
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Alert Dialog */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useState, DragEvent, ChangeEvent, useId } from "react";
+import React, { FC, useState, useEffect, DragEvent, ChangeEvent, useId } from "react";
 import { UploadCloud, Image as ImageIcon, X, FileImage } from "lucide-react";
 
 interface ImageDropzoneProps {
@@ -27,6 +27,13 @@ const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value, acceptType = "
     const [fileInfo, setFileInfo] = useState<{ name: string; size: number; type: string } | null>(null);
 
     const preview = internalPreview || value;
+
+    // Reset stale local preview when parent value switches externally (e.g., switching CMS pages or after upload)
+    useEffect(() => {
+        if (!value || !value.startsWith("blob:")) {
+            setInternalPreview(null);
+        }
+    }, [value]);
 
     const handleDragOver = (e: DragEvent<HTMLLabelElement>) => {
         e.preventDefault();
@@ -101,7 +108,7 @@ const ImageDropzone: FC<ImageDropzoneProps> = ({ onChange, value, acceptType = "
             >
                 {preview ? (
                     <div className="relative w-full h-auto min-h-[12rem] p-2 flex items-center justify-center overflow-hidden rounded-xl">
-                        {preview && preview.match(/\.(mp4|webm|ogg)$/i) || (fileInfo?.type.startsWith("video/")) ? (
+                        {(acceptType === "video" || fileInfo?.type.startsWith("video/") || (typeof preview === "string" && (preview.match(/\.(mp4|webm|ogg|mov|mkv)$/i) || preview.includes("/video/upload/")))) ? (
                             <video
                                 src={preview}
                                 className="w-full h-auto object-contain rounded-lg max-h-[300px]"

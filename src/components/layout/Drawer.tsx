@@ -82,8 +82,10 @@ export function DrawerComponent({ listArray }: DrawerProps) {
       {mounted && createPortal(
         <div
           className={cn(
-            "fixed top-0 left-0 h-full w-[85%] max-w-[320px] bg-gradient-to-b from-[#0f142e] via-[#090b1a] to-[#05060e] text-white backdrop-blur-2xl shadow-[25px_0_60px_-15px_rgba(0,0,0,0.85)] transform transition-transform duration-300 ease-out z-[100] lg:hidden flex flex-col border-r border-white/10",
-            isOpen ? 'translate-x-0' : '-translate-x-full'
+            "fixed top-0 left-0 h-full w-[85%] max-w-[320px] bg-gradient-to-b from-[#0f142e] via-[#090b1a] to-[#05060e] text-white backdrop-blur-2xl transform transition-all duration-300 ease-out z-[100] lg:hidden flex flex-col border-r border-white/10",
+            isOpen
+              ? 'translate-x-0 opacity-100 visible shadow-[25px_0_60px_-15px_rgba(0,0,0,0.85)]'
+              : '-translate-x-full opacity-0 invisible pointer-events-none shadow-none'
           )}
         >
           {/* Header Section */}

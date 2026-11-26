@@ -10,6 +10,7 @@ const RewardsSection = dynamic(() => import('@/components/profile/sections/Rewar
 const OrdersSection = dynamic(() => import('@/components/profile/sections/Orders').then(mod => mod.OrdersSection), { ssr: false });
 const AddressesSection = dynamic(() => import('@/components/profile/sections/Addresses'), { ssr: false });
 const AffiliateSection = dynamic(() => import('@/components/profile/sections/AffiliateSection').then(mod => mod.AffiliateSection), { ssr: false });
+const PrivacyDataSection = dynamic(() => import('@/components/profile/sections/PrivacyDataSection'), { ssr: false });
 import { ArrowLeft, User as UserIcon } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { Sidebar } from '@/components/profile/Sidebar';
@@ -44,7 +45,7 @@ const ProfileContent: React.FC = () => {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab) {
-        const validTabs: ActiveSection[] = ['personal-info', 'addresses', 'orders', 'rewards', 'reviews', 'help', 'affiliate'];
+        const validTabs: ActiveSection[] = ['personal-info', 'addresses', 'orders', 'rewards', 'reviews', 'privacy', 'help', 'affiliate'];
         if (validTabs.includes(tab as any)) {
             setActiveSection(tab as any);
         }
@@ -68,6 +69,7 @@ const ProfileContent: React.FC = () => {
       'orders': 'My Orders',
       'rewards': 'My Rewards',
       'reviews': 'My Reviews & Ratings',
+      'privacy': 'Privacy & Data Controls',
       'help': 'Help & Support',
       'affiliate': 'Affiliate, Wallet & Leaderboard',
     };
@@ -122,6 +124,7 @@ const ProfileContent: React.FC = () => {
         })))} />;
         case 'rewards': return <RewardsSection rewards={rewards} />;
         case 'reviews': return <ReviewsSection />;
+        case 'privacy': return <PrivacyDataSection />;
         case 'help': return <HelpSupportSection />;
         case 'affiliate': return <AffiliateSection />;
         default: return <PersonalInformation profile={mappedProfile} onSave={handleProfileSave} />;

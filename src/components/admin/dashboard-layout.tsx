@@ -72,7 +72,7 @@ const navigationGroups = [
     label: "Dashboard",
     items: [
       { title: "Overview", href: "/admin", icon: LayoutDashboard },
-      { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+      { title: "Analytics & Insights", href: "/admin/analytics", icon: BarChart3 },
       { title: "AI Chat Analytics", href: "/admin/rag-dashboard", icon: BotMessageSquare },
     ]
   },
@@ -213,24 +213,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Floating AI Analyst Button */}
         <button
           onClick={() => setIsAnalystOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-slate-950 font-black shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-emerald-500/40 active:scale-95"
+          className="fixed bottom-20 right-6 z-50 group flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/25 transition-all duration-300 hover:scale-105 active:scale-95"
           title="Aura Intelligence"
         >
-          <BrainCircuit className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-12" />
+          <BrainCircuit className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-6" />
           {alertCount > 0 ? (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-md ring-2 ring-[#0f0f1a]">
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-md ring-2 ring-white">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
               <span className="relative">{alertCount}</span>
             </span>
           ) : (
-            <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-[#0f0f1a]" />
+            <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-indigo-400 ring-2 ring-white" />
             </span>
           )}
           {/* Tooltip */}
-          <span className="absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-            🧠 Aura Intelligence {alertCount > 0 ? `(${alertCount} Alerts)` : "(Store Analyst)"}
+          <span className="absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 pointer-events-none">
+            Aura Intelligence {alertCount > 0 ? `(${alertCount} Alerts)` : "(Store Analyst)"}
           </span>
         </button>
 

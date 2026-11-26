@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useCreateShareLinkMutation } from "@/redux/api/shareApi";
+import { useAppSelector } from "@/redux/hooks";
+import { RootState } from "@/redux/store";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
@@ -14,6 +16,7 @@ interface ProductShareEarnButtonProps {
 }
 
 export const ProductShareEarnButton: React.FC<ProductShareEarnButtonProps> = ({ productId, productName }) => {
+  const { isAuthenticated } = useAppSelector((state: RootState) => state.user);
   const [isOpen, setIsOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -21,15 +24,22 @@ export const ProductShareEarnButton: React.FC<ProductShareEarnButtonProps> = ({ 
   const [createShareLink, { isLoading }] = useCreateShareLinkMutation();
 
   const handleOpen = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to generate your tracked Share & Earn referral link");
+      return;
+    }
     setIsOpen(true);
     try {
-      const res: any = await createShareLink({ productId }).unwrap();
-      const code = res?.data?.link?.code;
+      const res: any = await createShareLink({ productId, type: "product" }).unwrap();
+      const code = res?.data?.shareLink?.code || res?.data?.link?.code;
       const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const generatedUrl = `${origin}/product/${productId}?ref=${code}`;
-      setShareUrl(generatedUrl);
-    } catch {
-      // Fallback
+      if (code) {
+        setShareUrl(`${origin}/product/${productId}?ref=${encodeURIComponent(code)}`);
+      } else {
+        setShareUrl(res?.data?.shareUrl || `${origin}/product/${productId}`);
+      }
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Could not create share link");
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       setShareUrl(`${origin}/product/${productId}`);
     }

@@ -1,11 +1,15 @@
 import type { MetadataRoute } from 'next';
+import { getServerApiUrl } from '@/lib/seo-utils';
+import { resolveRequestSiteUrl } from '@/lib/seo-server';
 
-const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000/api/v1';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+export const dynamic = 'force-dynamic';
 
 async function fetchAll<T>(url: string, fallback: T[]): Promise<T[]> {
     try {
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetch(url, {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(5000),
+        });
         if (!res.ok) return fallback;
         return res.json().then(d => d?.data?.products || d?.products || d?.data || fallback);
     } catch {
@@ -14,29 +18,37 @@ async function fetchAll<T>(url: string, fallback: T[]): Promise<T[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    const [appUrl, baseUrl] = await Promise.all([
+        resolveRequestSiteUrl(),
+        Promise.resolve(getServerApiUrl()),
+    ]);
+
     // Static pages — always included
     const staticPages: MetadataRoute.Sitemap = [
-        { url: APP_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
-        { url: `${APP_URL}/product`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
-        { url: `${APP_URL}/login`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
-        { url: `${APP_URL}/signup`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
+        { url: appUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
+        { url: `${appUrl}/product`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+        { url: `${appUrl}/login`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
+        { url: `${appUrl}/signup`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
     ];
 
-    // Dynamic: all products
+    // Dynamic: all products and categories in parallel
     interface RawProduct { _id: string; updatedAt?: string }
-    const products = await fetchAll<RawProduct>(`${BASE_URL}/products?page=1`, []);
+    interface RawCategory { _id: string; updatedAt?: string }
+
+    const [products, categories] = await Promise.all([
+        fetchAll<RawProduct>(`${baseUrl}/products?page=1&limit=500`, []),
+        fetchAll<RawCategory>(`${baseUrl}/categories`, []),
+    ]);
+
     const productPages: MetadataRoute.Sitemap = products.map((p) => ({
-        url: `${APP_URL}/product/${p._id}`,
+        url: `${appUrl}/product/${p._id}`,
         lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(),
         changeFrequency: 'weekly',
         priority: 0.8,
     }));
 
-    // Dynamic: all categories
-    interface RawCategory { _id: string; updatedAt?: string }
-    const categories = await fetchAll<RawCategory>(`${BASE_URL}/categories`, []);
     const categoryPages: MetadataRoute.Sitemap = categories.map((c) => ({
-        url: `${APP_URL}/product?category=${c._id}`,
+        url: `${appUrl}/product?category=${c._id}`,
         lastModified: c.updatedAt ? new Date(c.updatedAt) : new Date(),
         changeFrequency: 'weekly',
         priority: 0.7,

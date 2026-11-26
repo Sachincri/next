@@ -33,24 +33,18 @@ const defaultKpis = {
 export default function HomePage() {
   const { data, isLoading: loading, error, refetch } = useGetAdminDashboardQuery()
   const { data: analyticsData } = useGetProductAnalyticsQuery()
-  const { socket, isConnected, joinAdminRoom, leaveAdminRoom } = useSocket()
+  const { socket, isConnected, joinAdminRoom } = useSocket()
   const { data: affiliateOverviewData } = useGetAdminAffiliateOverviewQuery();
   const { data: leaderboardData } = useGetLeaderboardQuery({ limit: 3 });
   const affOverview = affiliateOverviewData?.data;
   const topLeaders = leaderboardData?.data?.leaderboard || [];
 
-  // Join admin room on mount and listen for real-time updates
+  // Join admin room when connected (Socket stays open across /admin/* pages for NotificationsPopover)
   useEffect(() => {
     if (isConnected) {
       joinAdminRoom()
     }
-
-    return () => {
-      if (isConnected) {
-        leaveAdminRoom()
-      }
-    }
-  }, [isConnected, joinAdminRoom, leaveAdminRoom])
+  }, [isConnected, joinAdminRoom])
 
   // Listen for dashboard update events
   useEffect(() => {
@@ -669,7 +663,14 @@ export default function HomePage() {
 
       {/* Enhanced Analytics Dashboard Section */}
       <div className="mt-8 min-w-0 w-full">
-        <h2 className="text-2xl font-bold text-foreground mb-4">Advanced Analytics</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-foreground">Advanced Analytics</h2>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/analytics" className="flex items-center gap-1.5 text-xs font-semibold">
+              Full Analytics & Insights <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Button>
+        </div>
         <div className="bg-card border rounded-lg p-2 sm:p-6 min-w-0 overflow-hidden">
           <EnhancedAnalyticsDashboard />
         </div>

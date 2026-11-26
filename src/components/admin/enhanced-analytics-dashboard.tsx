@@ -158,7 +158,8 @@ export default function EnhancedAnalyticsDashboard() {
     const totalOrders = salesData.reduce((acc: number, curr: any) => acc + (curr.orders || 0), 0);
     const totalGross = salesData.reduce((acc: number, curr: any) => acc + (curr.grossSales || 0), 0);
     const totalProfit = salesData.reduce((acc: number, curr: any) => acc + (curr.profit || 0), 0);
-    const totalTax = totalGross * 0.18;
+    const effectiveGstRate = (taxSettings?.gstRate || 18) + (taxSettings?.taxRate || 0);
+    const totalTax = totalGross > 0 ? (totalGross - totalGross / (1 + effectiveGstRate / 100)) : 0;
 
     return {
       aov: totalOrders > 0 ? totalRevenue / totalOrders : 0,
@@ -166,7 +167,7 @@ export default function EnhancedAnalyticsDashboard() {
       netProfit: totalProfit,
       revenue: totalRevenue
     }
-  }, [salesData]);
+  }, [salesData, taxSettings]);
 
   const handleExportCSV = () => {
     if (!salesData.length) return;

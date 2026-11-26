@@ -4,7 +4,8 @@ import React from "react";
 import { ShoppingCart, Zap, CheckCircle2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useAddToCartMutation } from "@/redux/api/cartApi";
-import { addToCartSuccess } from "@/redux/reducer/cartReducer";
+import { addToCartSuccess, addShippingInfo } from "@/redux/reducer/cartReducer";
+import { useGetAddressesQuery } from "@/redux/api/addressApi";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useProductSelection } from "./ProductSelectionContext";
@@ -35,7 +36,8 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
 }) => {
     const router = useRouter();
     const dispatch = useAppDispatch();
-    const { isAuthenticated } = useAppSelector((state) => state.user);
+    const { isAuthenticated, user } = useAppSelector((state) => state.user);
+    const { data: addresses } = useGetAddressesQuery(undefined, { skip: !isAuthenticated });
     const [addToCartServer] = useAddToCartMutation();
 
     const { selectedColor, setSelectedColor, selectedSize, setSelectedSize } = useProductSelection();
@@ -88,23 +90,39 @@ export const ProductActionButtons: React.FC<ProductActionButtonsProps> = ({
     const buyNow = async () => {
         if (!validateSelection()) return;
 
+        if (!isAuthenticated) {
+            toast.error("Please login to proceed with Buy Now");
+            router.push(`/login?redirect=/product/${productId}`);
+            return;
+        }
+
         const variant = getVariant();
 
-        if (isAuthenticated) {
-            await addToCartServer({ productId, quantity: 1, variant });
-        } else {
-            dispatch(addToCartSuccess({
-                product: productId,
-                name,
-                price,
-                image: (selectedColor && colors?.find(c => c.name === selectedColor)?.image) || thumbnail || "",
-                stock,
-                quantity: 1,
-                size: selectedSize || undefined,
-                color: selectedColor || undefined,
-            }));
+        try {
+            await addToCartServer({ productId, quantity: 1, variant }).unwrap();
+
+            const addressList = Array.isArray(addresses) ? addresses : (addresses as any)?.data || [];
+            if (addressList && addressList.length > 0) {
+                const defaultAddr = addressList.find((a: any) => a.isDefault) || addressList[0];
+                dispatch(addShippingInfo({
+                    name: defaultAddr.name || user?.name || '',
+                    firstName: (defaultAddr.name || user?.name || 'Customer').split(' ')[0],
+                    lastName: (defaultAddr.name || '').split(' ').slice(1).join(' ') || '',
+                    email: user?.email || '',
+                    address: defaultAddr.address,
+                    city: defaultAddr.city,
+                    state: defaultAddr.state,
+                    country: defaultAddr.country || 'India',
+                    pinCode: Number(defaultAddr.pinCode),
+                    phoneNo: Number(defaultAddr.phoneNo),
+                } as any));
+                router.push('/order-summary');
+            } else {
+                router.push('/shipping');
+            }
+        } catch (err: any) {
+            toast.error(err?.data?.message || "Failed to process Buy Now");
         }
-        router.push("/shipping");
     };
 
     const [isScrolled, setIsScrolled] = React.useState(false);

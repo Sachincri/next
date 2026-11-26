@@ -10,11 +10,23 @@ import { Badge } from "@/ui/badge"
 import { Checkbox } from "@/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/dropdown-menu"
-import { Eye, Edit, MoreHorizontal, ChevronLeft, ChevronRight, Package, Truck, Coins, Printer, Mail } from "lucide-react"
+import { Eye, Edit, MoreHorizontal, ChevronLeft, ChevronRight, Package, Truck, Coins, Printer, Mail, Trash2, Download, X } from "lucide-react"
 import OrderDetailModal from "./order-detail-modal"
-import { useGetAllOrdersQuery, useUpdateOrderMutation, useDeleteOrderMutation, useSendOrderEmailMutation } from "@/redux/api/adminApi"
+import { useGetAllOrdersQuery, useUpdateOrderMutation, useDeleteOrderMutation, useSendOrderEmailMutation, useGetAppSettingsQuery, useBulkOrderActionMutation } from "@/redux/api/adminApi"
+import { exportOrdersToCSV } from "@/utils/csvHelper"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/ui/alert-dialog"
 import toast from "react-hot-toast"
-import InvoiceTemplate from "./invoice-template"
+import InvoiceTemplate, { printInvoice } from "./invoice-template"
+import { resolveOrderPaymentStatus } from "@/lib/order-utils"
 
 export default function OrdersTable() {
   const router = useRouter();
@@ -22,6 +34,13 @@ export default function OrdersTable() {
 
   const currentPage = Number(searchParams.get("page")) || 1;
   const statusFilter = searchParams.get("status") || "all";
+  const paymentFilter = searchParams.get("payment") || "all";
+  const paymentMethodFilter = searchParams.get("paymentMethod") || "all";
+  const startDate = searchParams.get("startDate") || "";
+  const endDate = searchParams.get("endDate") || "";
+  const minAmount = searchParams.get("minAmount") || "";
+  const maxAmount = searchParams.get("maxAmount") || "";
+  const sortBy = searchParams.get("sortBy") || "newest";
   const debouncedSearch = searchParams.get("search") || "";
   const itemsPerPage = 10;
 
@@ -29,11 +48,20 @@ export default function OrdersTable() {
     page: currentPage,
     limit: itemsPerPage,
     status: statusFilter === "all" ? undefined : statusFilter,
-    search: debouncedSearch
+    payment: paymentFilter === "all" ? undefined : paymentFilter,
+    paymentMethod: paymentMethodFilter === "all" ? undefined : paymentMethodFilter,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    minAmount: minAmount || undefined,
+    maxAmount: maxAmount || undefined,
+    sortBy: sortBy || undefined,
+    search: debouncedSearch || undefined,
   });
   const [updateOrder] = useUpdateOrderMutation();
   const [deleteOrder] = useDeleteOrderMutation();
+  const [bulkOrderAction, { isLoading: isBulkLoading }] = useBulkOrderActionMutation();
   const [sendOrderEmail, { isLoading: isSendingEmail }] = useSendOrderEmailMutation();
+  const { data: storeSettings } = useGetAppSettingsQuery();
 
   const orders = serverOrdersData?.orders || [];
   const totalOrders = serverOrdersData?.totalOrders || 0;
@@ -42,6 +70,7 @@ export default function OrdersTable() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [showOrderDetail, setShowOrderDetail] = useState(false)
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false)
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedOrders = orders; // Server already paginated it
@@ -71,18 +100,17 @@ export default function OrdersTable() {
     return <Badge className={`${config.color} hover:${config.color}`}>{config.label}</Badge>
   }
 
-  const getPaymentBadge = (status: string) => {
-    const statusConfig = {
-      paid: { color: "bg-green-100 text-green-800", label: "Paid" },
-      success: { color: "bg-green-100 text-green-800", label: "Paid" },
-      pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-      failed: { color: "bg-red-100 text-red-800", label: "Failed" },
-      refunded: { color: "bg-gray-100 text-gray-800", label: "Refunded" },
-    }
-
-    const config = statusConfig[status?.toLowerCase() as keyof typeof statusConfig] || statusConfig.pending
-    return <Badge className={`${config.color} hover:${config.color}`}>{config.label}</Badge>
-  }
+  const renderPaymentColumn = (order: any) => {
+    const payment = resolveOrderPaymentStatus(order);
+    return (
+      <div className="flex flex-col gap-1 items-start">
+        <span className="text-xs font-medium text-muted-foreground">{payment.method}</span>
+        <Badge className={`${payment.tailwindBadgeClass} hover:${payment.tailwindBadgeClass}`}>
+          {payment.badgeText}
+        </Badge>
+      </div>
+    );
+  };
 
   const handleSelectOrder = (orderId: string) => {
     setSelectedOrders((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]))
@@ -107,43 +135,7 @@ export default function OrdersTable() {
   }
 
   const handlePrintLabel = (order: any) => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print Invoice</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-          </head>
-          <body>
-            <div id="print-root"></div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-
-      setTimeout(() => {
-        const rootEl = printWindow.document.getElementById('print-root');
-        if (rootEl) {
-          const root = createRoot(rootEl);
-          root.render(<InvoiceTemplate order={order} />);
-
-          let checkCount = 0;
-          const checkTailwind = setInterval(() => {
-            const hasStyle = printWindow.document.querySelector('style');
-            if (hasStyle || checkCount > 30) {
-              clearInterval(checkTailwind);
-              setTimeout(() => {
-                printWindow.print();
-              }, 500);
-            }
-            checkCount++;
-          }, 100);
-        }
-      }, 50);
-    } else {
-      toast.error("Popup blocked. Please allow popups for this site.");
-    }
+    printInvoice(order, storeSettings);
   };
 
   const handleBulkPrint = () => {
@@ -152,20 +144,10 @@ export default function OrdersTable() {
       return;
     }
 
-    // For bulk types, we could iterate or show a combined view. For now, let's print the first selected or all in sequence.
-    // Printing multiple windows might be blocked. A better approach for bulk is a single page with page breaks.
-
-    // Let's implement a bulk view logic later if requested, or just print the last selected for now as a demo, 
-    // or loop through effectively.
-    // A better approach for bulk is to pass an array of orders to InvoiceTemplate or wrapped component.
-
-    // For simplicity in this iteration, I'll just toast functionality or print the first selected.
-    const orderToPrint = orders.find((o: any) => o._id === selectedOrders[0]);
-    if (orderToPrint) {
-      handlePrintLabel(orderToPrint);
-      if (selectedOrders.length > 1) {
-        toast("Printed first selected order. Bulk print logic to be enhanced.", { icon: 'ℹ️' });
-      }
+    const ordersToPrint = orders.filter((o: any) => selectedOrders.includes(o._id));
+    if (ordersToPrint.length > 0) {
+      printInvoice(ordersToPrint, storeSettings);
+      toast.success(`Printing ${ordersToPrint.length} invoice(s)...`);
     }
   };
 
@@ -178,23 +160,110 @@ export default function OrdersTable() {
     }
   };
 
+  const handleBulkStatusUpdate = async (status: string) => {
+    if (selectedOrders.length === 0) return;
+    try {
+      const res = await bulkOrderAction({ orderIds: selectedOrders, action: "status", status }).unwrap();
+      toast.success(res?.message || `Updated ${selectedOrders.length} order(s)`);
+      setSelectedOrders([]);
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to update orders");
+    }
+  };
+
+  const handleExecuteBulkDelete = async () => {
+    try {
+      const res = await bulkOrderAction({ orderIds: selectedOrders, action: "delete" }).unwrap();
+      toast.success(res?.message || `Deleted ${selectedOrders.length} order(s)`);
+      setSelectedOrders([]);
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to delete orders");
+    } finally {
+      setDeleteAlertOpen(false);
+    }
+  };
+
+  const handleExportCurrentView = () => {
+    if (!orders || orders.length === 0) {
+      toast.error("No orders to export in current view");
+      return;
+    }
+    exportOrdersToCSV(orders, `orders_view_page_${currentPage}.csv`);
+    toast.success(`Exported ${orders.length} order(s) from current view`);
+  };
+
   return (
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Orders ({totalOrders})</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg font-semibold">Orders ({totalOrders})</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleExportCurrentView}
+                title="Export current page orders to CSV"
+              >
+                <Download className="w-3.5 h-3.5 mr-1" />
+                Export View
+              </Button>
+            </div>
 
             {selectedOrders.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{selectedOrders.length} selected</span>
-                <Button variant="outline" size="sm">
-                  <Package className="w-4 h-4 mr-2" />
-                  Update Status
+              <div className="flex flex-wrap items-center gap-2 bg-muted/60 p-1.5 rounded-lg border border-border">
+                <span className="text-xs font-medium text-foreground px-2">
+                  {selectedOrders.length} selected
+                </span>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs" disabled={isBulkLoading}>
+                      <Package className="w-3.5 h-3.5 mr-1.5" />
+                      Status
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Processing")}>
+                      Mark as Processing
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Shipped")}>
+                      Mark as Shipped
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Delivered")}>
+                      Mark as Delivered
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleBulkStatusUpdate("Cancelled")}>
+                      Mark as Cancelled
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleBulkPrint}>
+                  <Printer className="w-3.5 h-3.5 mr-1.5" />
+                  Print
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkPrint}>
-                  <Printer className="w-4 h-4 mr-2" />
-                  Print Labels
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  onClick={() => setDeleteAlertOpen(true)}
+                  disabled={isBulkLoading}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  Delete
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs px-2 text-muted-foreground"
+                  onClick={() => setSelectedOrders([])}
+                  title="Clear selection"
+                >
+                  <X className="w-3.5 h-3.5" />
                 </Button>
               </div>
             )}
@@ -258,14 +327,18 @@ export default function OrdersTable() {
                         <div>
                           <div className="font-medium text-sm">{order.user?.name}</div>
                           <div className="text-xs text-muted-foreground">{order.user?.email}</div>
+                          {Boolean(order.referralCode || order.referredBy) && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                                🔗 Ref: {order.referredBy?.name || order.referralCode}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 font-semibold">₹{order.totalPrice}</td>
                       <td className="py-3 px-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs font-medium uppercase text-muted-foreground">{order.paymentInfo?.method || "Online"}</span>
-                          {getPaymentBadge(order.paymentInfo?.status)}
-                        </div>
+                        {renderPaymentColumn(order)}
                       </td>
                       <td className="py-3 px-4">
                         <Select
@@ -303,7 +376,7 @@ export default function OrdersTable() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handlePrintLabel(order)}>
                               <Printer className="w-4 h-4 mr-2" />
-                              Print Label
+                              Print Tax Invoice
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleSendEmail(order._id)}>
                               <Mail className="w-4 h-4 mr-2" />
@@ -371,6 +444,26 @@ export default function OrdersTable() {
       </Card>
 
       <OrderDetailModal order={selectedOrder} open={showOrderDetail} onOpenChange={setShowOrderDetail} />
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Orders</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete {selectedOrders.length} selected order(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExecuteBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

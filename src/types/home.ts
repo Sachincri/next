@@ -1,8 +1,13 @@
 export interface SeoState {
     title: string;
+    description?: string;
     metaDescription: string;
     slug: string;
     ogImage: string | { url: string; public_id: string };
+    ogTitle?: string;
+    ogDescription?: string;
+    noIndex?: boolean;
+    canonicalUrl?: string;
 }
 
 export interface CarouselItem {
@@ -17,8 +22,10 @@ export interface CarouselState {
 }
 
 export interface Banner {
-    image: string | { url: string; public_id: string };
+    image?: string | { url: string; public_id: string };
+    video?: string | { url: string; public_id: string };
     title: string;
+    ctaText?: string;
     redirectLink: string;
 }
 

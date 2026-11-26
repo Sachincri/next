@@ -130,7 +130,11 @@ export default function LeaderboardPage() {
   }, [activeContest]);
 
   /* ── Real User Tactical Data ── */
-  const userVerifiedShares = myStatsData?.data?.totalPurchases ?? myStatsData?.data?.totalOrders ?? 0;
+  const userVerifiedShares =
+    myStatsData?.data?.verifiedPurchases ??
+    myStatsData?.data?.totalPurchases ??
+    myStatsData?.data?.totalOrders ??
+    0;
   const userClicks = myStatsData?.data?.totalClicks ?? 0;
   const userConversionRate = myStatsData?.data?.conversionRate !== undefined
     ? myStatsData.data.conversionRate
@@ -146,11 +150,14 @@ export default function LeaderboardPage() {
   const isUserRanked = userRankIndex !== -1;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://aura-store.com";
-  const userShareCode = myLinksData?.data?.links?.[0]?.code || (user ? `REF${String((user as any)._id || "").slice(-5).toUpperCase()}` : "");
+  const userShareCode = myLinksData?.data?.links?.[0]?.code || (user ? `REF${String((user as any)._id || "").slice(-6).toUpperCase()}` : "");
   const referralUrl = userShareCode ? `${origin}/?ref=${userShareCode}` : origin;
 
   const copyToClipboard = async (text: string) => {
-    if (!text) return;
+    if (!text || text === origin) {
+      toast.error("Referral link is still loading, please wait...");
+      return;
+    }
     await copyToClipboardSafe(text);
     setCopied(true);
     toast.success("Referral link copied to clipboard!");

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialo
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card"
 import { Badge } from "../../ui/badge"
 import { Switch } from "../../ui/switch"
-import { Plus, X, Trash2, Palette, Edit3, Image as ImageIcon, Upload, Sparkles, Loader2, Eye, Code } from "lucide-react"
+import { Checkbox } from "../../ui/checkbox"
+import { Plus, X, Trash2, Palette, Edit3, Image as ImageIcon, Upload, Sparkles, Loader2, Eye, Code, Video, Play } from "lucide-react"
 import { toast } from "react-hot-toast"
 
 // --- Schemas ---
@@ -34,14 +35,15 @@ const specificationSchema = z.object({
 
 const productSchema = z.object({
   name: z.string().min(1).max(100),
-  brandId: z.string().min(1,).optional(),
+  brandId: z.string().optional(),
   sellingPrice: z.number().min(0.01),
   actualPrice: z.number().min(0).optional(),
   mrp: z.number().min(0).optional(),
-  stock: z.number().int().min(1).optional(),
-  categoryId: z.string().min(1, "Category is required"),
+  stock: z.number().int().min(0).optional(),
+  categoryId: z.string().optional(),
   discount: z.number().min(0).max(100).optional(),
   warranty: z.string().max(100).optional(),
+  hsnCode: z.string().max(20).optional(),
   description: z.string().max(2000).optional(),
   offers: z.array(z.string().min(1)).max(10).optional(),
   highlights: z.array(z.string().min(1)).max(10).optional(),
@@ -49,6 +51,7 @@ const productSchema = z.object({
   specifications: z.array(specificationSchema).max(20).optional(),
   colors: z.array(colorSchema).max(20).optional(),
   isActive: z.boolean(),
+  syncToRag: z.boolean().optional(),
   homeDisplaySection: z.string().optional(),
   seo: z.object({
     title: z.string().max(60, "SEO Title should be max 60 characters").optional(),
@@ -61,10 +64,38 @@ const productSchema = z.object({
 
 export type ProductFormData = z.infer<typeof productSchema>
 
+export const DEFAULT_PRODUCT_VALUES: ProductFormData = {
+  name: "",
+  brandId: "",
+  sellingPrice: 0,
+  actualPrice: 0,
+  mrp: undefined,
+  stock: 0,
+  categoryId: "",
+  discount: 0,
+  warranty: "",
+  hsnCode: "",
+  description: "",
+  offers: [],
+  highlights: [],
+  sizes: [],
+  specifications: [],
+  colors: [],
+  isActive: true,
+  syncToRag: true,
+  homeDisplaySection: "",
+  seo: {
+    title: "",
+    description: "",
+    keywords: [],
+  },
+  thumbnail: undefined,
+}
+
 interface AddEditProductModalProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  initialData?: Partial<ProductFormData> & { images?: string[] }
+  initialData?: Partial<ProductFormData> & { images?: string[]; videos?: string[] }
   onSave: (payload: FormData) => Promise<void>
 }
 
@@ -76,16 +107,29 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
   const [existingImages, setExistingImages] = useState<string[]>(initialData?.images ?? [])
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [newPreviews, setNewPreviews] = useState<string[]>([])
-  const [imageError, setImageError] = useState<string>("")
+
+  const [existingVideos, setExistingVideos] = useState<string[]>((initialData as any)?.videos ?? [])
+  const [newVideoFiles, setNewVideoFiles] = useState<File[]>([])
+  const [newVideoPreviews, setNewVideoPreviews] = useState<string[]>([])
+
+  const [mediaError, setMediaError] = useState<string>("")
   const [isPreview, setIsPreview] = useState(false)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const thumbnailInputRef = useRef<HTMLInputElement>(null)
+  const mediaInputRef = useRef<HTMLInputElement>(null)
+  const blobUrlsRef = useRef<Set<string>>(new Set())
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>((initialData as any)?.thumbnail?.url ?? null)
   const [aiContext, setAiContext] = useState<string>("")
 
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024
-  const MAX_IMAGES = 10
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024
+  const MAX_MEDIA = 12
+  const MAX_VIDEOS = 1
   const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+  const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska"]
+  const ALL_ALLOWED_MEDIA_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]
 
   const { data: brands, isLoading: brandsLoading } = useGetBrandsQuery()
   const { data: categories, isLoading: categoriesLoading } = useGetCategoriesQuery()
@@ -196,30 +240,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
   const { control, register, handleSubmit, reset, setValue, getValues, watch, formState: { errors, isSubmitting, isValid } } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     mode: "onChange",
-    defaultValues: {
-      name: "",
-      brandId: "",
-      sellingPrice: 0,
-      actualPrice: 0,
-      mrp: undefined,
-      stock: 0,
-      categoryId: "",
-      discount: 0,
-      warranty: "",
-      description: "",
-      offers: [],
-      highlights: [],
-      sizes: [],
-      specifications: [],
-      colors: [],
-      isActive: true,
-      homeDisplaySection: "",
-      seo: {
-        title: "",
-        description: "",
-        keywords: [],
-      },
-    }
+    defaultValues: DEFAULT_PRODUCT_VALUES,
   })
 
   // Field Arrays
@@ -233,59 +254,84 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
   const watchedColors = watch("colors")
   const watchedSpecs = watch("specifications")
 
-  useEffect(() => {
-    if (initialData) {
-      const clone: any = { ...initialData }
-      delete clone.images
-      // ensure arrays exist
-      clone.offers = clone.offers ?? []
-      clone.highlights = clone.highlights ?? []
-      clone.sizes = clone.sizes ?? []
-      clone.specifications = clone.specifications ?? []
-      clone.colors = clone.colors ?? []
-      clone.isActive = clone.isActive ?? true
-      clone.seo = clone.seo ?? { title: "", description: "", keywords: [] }
+  const resetLocal = useCallback(() => {
+    blobUrlsRef.current.forEach((url) => {
+      try {
+        URL.revokeObjectURL(url)
+      } catch {}
+    })
+    blobUrlsRef.current.clear()
 
-      // Map brand and category to IDs if they are objects
-      if (typeof clone.brand === 'object' && clone.brand?._id) clone.brandId = clone.brand._id
-      else if (clone.brand && typeof clone.brand === 'string') clone.brandId = clone.brand
+    reset(DEFAULT_PRODUCT_VALUES)
+    setExistingImages([])
+    setNewFiles([])
+    setNewPreviews([])
+    setExistingVideos([])
+    setNewVideoFiles([])
+    setNewVideoPreviews([])
+    setMediaError("")
+    setThumbnailFile(null)
+    setThumbnailPreview(null)
+    setAiContext("")
+    setIsPreview(false)
 
-      if (typeof clone.category === 'object' && clone.category?._id) clone.categoryId = clone.category._id
-      else if (clone.category && typeof clone.category === 'string') clone.categoryId = clone.category
-
-      reset(clone)
-      setExistingImages(initialData.images ?? [])
-    } else {
-      reset({
-        name: "",
-        brandId: "",
-        sellingPrice: 0,
-        actualPrice: 0,
-        mrp: undefined,
-        stock: 0,
-        categoryId: "",
-        discount: 0,
-        warranty: "",
-        description: "",
-        offers: [],
-        highlights: [],
-        sizes: [],
-        specifications: [],
-        colors: [],
-        isActive: true,
-        homeDisplaySection: "",
-        seo: {
-          title: "",
-          description: "",
-          keywords: [],
-        },
+    if (typeof document !== 'undefined') {
+      const ids = ['offerInput', 'highlightInput', 'sizeInput', 'keywordInput']
+      ids.forEach((id) => {
+        const el = document.getElementById(id) as HTMLInputElement | null
+        if (el) el.value = ''
       })
-      setExistingImages([])
     }
-  }, [initialData, reset])
+    if (videoInputRef.current) videoInputRef.current.value = ''
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = ''
+    if (mediaInputRef.current) mediaInputRef.current.value = ''
+  }, [reset])
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        const clone: any = { ...initialData }
+        delete clone.images
+        delete clone.videos
+        // ensure arrays exist
+        clone.offers = clone.offers ?? []
+        clone.highlights = clone.highlights ?? []
+        clone.sizes = clone.sizes ?? []
+        clone.specifications = clone.specifications ?? []
+        clone.colors = clone.colors ?? []
+        clone.isActive = clone.isActive ?? true
+        clone.syncToRag = clone.syncToRag ?? true
+        clone.seo = clone.seo ?? { title: "", description: "", keywords: [] }
+
+        // Map brand and category to IDs if they are objects
+        if (typeof clone.brand === 'object' && clone.brand?._id) clone.brandId = clone.brand._id
+        else if (clone.brand && typeof clone.brand === 'string') clone.brandId = clone.brand
+
+        if (typeof clone.category === 'object' && clone.category?._id) clone.categoryId = clone.category._id
+        else if (clone.category && typeof clone.category === 'string') clone.categoryId = clone.category
+
+        reset(clone)
+        setExistingImages(initialData.images ?? [])
+        setExistingVideos((initialData as any)?.videos ?? [])
+        setNewFiles([])
+        setNewPreviews([])
+        setNewVideoFiles([])
+        setNewVideoPreviews([])
+        setThumbnailFile(null)
+        setThumbnailPreview((initialData as any)?.thumbnail?.url ?? null)
+        setMediaError("")
+        setAiContext("")
+        setIsPreview(false)
+      } else {
+        resetLocal()
+      }
+    }
+  }, [isOpen, initialData, resetLocal, reset])
 
   // Derived states
   const totalImageCount = useMemo(() => existingImages.length + newFiles.length, [existingImages.length, newFiles.length])
+  const totalVideoCount = useMemo(() => existingVideos.length + newVideoFiles.length, [existingVideos.length, newVideoFiles.length])
+  const totalMediaCount = useMemo(() => totalImageCount + totalVideoCount, [totalImageCount, totalVideoCount])
   const watchedSellingPrice = watch("sellingPrice")
   const watchedMRP = watch("mrp")
   const watchedPrice = watch("sellingPrice") // For backward compatibility within this file if needed
@@ -299,30 +345,99 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
     }
   }, [watchedSellingPrice, watchedMRP, setValue])
 
-  // Image handlers for Main Product
+  // Unified Media Handlers (Images & Video)
   const handleFilesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setImageError("")
+    setMediaError("")
     const files = e.target.files ? Array.from(e.target.files) : []
-    if (existingImages.length + files.length + newFiles.length > MAX_IMAGES) {
-      setImageError(`Max ${MAX_IMAGES} images allowed`)
+    if (files.length === 0) return
+
+    const currentTotal = existingImages.length + newFiles.length + existingVideos.length + newVideoFiles.length
+    if (currentTotal + files.length > MAX_MEDIA) {
+      setMediaError(`Max ${MAX_MEDIA} media items allowed`)
       return
     }
-    const oversized = files.filter(f => f.size > MAX_IMAGE_SIZE)
-    if (oversized.length) return setImageError("Some files exceed 5MB")
-    const invalid = files.filter(f => !ALLOWED_IMAGE_TYPES.includes(f.type))
-    if (invalid.length) return setImageError("Invalid file type")
 
-    // read previews
-    files.forEach((file) => {
+    const imageFilesToAdd: File[] = []
+    const videoFilesToAdd: File[] = []
+
+    for (const f of files) {
+      if (ALLOWED_VIDEO_TYPES.includes(f.type) || f.type.startsWith("video/")) {
+        const totalVids = existingVideos.length + newVideoFiles.length + videoFilesToAdd.length
+        if (totalVids >= MAX_VIDEOS) {
+          toast.error("Only 1 product video is allowed. Additional video ignored.")
+          continue
+        }
+        if (f.size > MAX_VIDEO_SIZE) {
+          toast.error(`Video "${f.name}" exceeds 50MB`)
+          continue
+        }
+        videoFilesToAdd.push(f)
+      } else if (ALLOWED_IMAGE_TYPES.includes(f.type) || f.type.startsWith("image/")) {
+        if (f.size > MAX_IMAGE_SIZE) {
+          toast.error(`Image "${f.name}" exceeds 5MB`)
+          continue
+        }
+        imageFilesToAdd.push(f)
+      } else {
+        toast.error(`Unsupported format: ${f.name}. Use JPEG, PNG, WEBP, MP4 or WEBM.`)
+      }
+    }
+
+    // Read image previews
+    imageFilesToAdd.forEach((file) => {
       const reader = new FileReader()
       reader.onload = () => {
-        if (reader.readyState === 2 && typeof reader.result === 'string') setNewPreviews(prev => [...prev, reader.result as string])
+        if (reader.readyState === 2 && typeof reader.result === 'string') {
+          setNewPreviews(prev => [...prev, reader.result as string])
+        }
       }
       reader.readAsDataURL(file)
     })
 
-    setNewFiles(prev => [...prev, ...files])
-  }, [existingImages.length, newFiles.length])
+    // Create video previews
+    videoFilesToAdd.forEach((file) => {
+      const blobUrl = URL.createObjectURL(file)
+      blobUrlsRef.current.add(blobUrl)
+      setNewVideoPreviews(prev => [...prev, blobUrl])
+    })
+
+    if (imageFilesToAdd.length > 0) setNewFiles(prev => [...prev, ...imageFilesToAdd])
+    if (videoFilesToAdd.length > 0) setNewVideoFiles(prev => [...prev, ...videoFilesToAdd])
+
+    e.target.value = ""
+  }, [existingImages.length, newFiles.length, existingVideos.length, newVideoFiles.length])
+
+  // Dedicated single video file change handler
+  const handleVideoFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMediaError("")
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (existingVideos.length + newVideoFiles.length >= MAX_VIDEOS) {
+      toast.error("Only 1 product video is allowed. Please remove the existing video first.")
+      e.target.value = ""
+      return
+    }
+
+    if (!ALLOWED_VIDEO_TYPES.includes(file.type) && !file.type.startsWith("video/")) {
+      toast.error("Invalid video format. Supported: MP4, WEBM, MOV, MKV")
+      e.target.value = ""
+      return
+    }
+
+    if (file.size > MAX_VIDEO_SIZE) {
+      toast.error(`Video "${file.name}" exceeds 50MB`)
+      e.target.value = ""
+      return
+    }
+
+    const blobUrl = URL.createObjectURL(file)
+    blobUrlsRef.current.add(blobUrl)
+    setNewVideoFiles([file])
+    setNewVideoPreviews([blobUrl])
+    toast.success("Product video added successfully")
+    e.target.value = ""
+  }, [existingVideos.length, newVideoFiles.length])
 
   const removeExistingImage = useCallback((index: number) => {
     setExistingImages(prev => prev.filter((_, i) => i !== index))
@@ -333,17 +448,21 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
     setNewPreviews(prev => prev.filter((_, i) => i !== index))
   }, [])
 
-  const resetLocal = useCallback(() => {
-    reset()
-    setExistingImages([])
-    setNewFiles([])
-    setNewPreviews([])
-    setNewPreviews([])
-    setImageError("")
-    setThumbnailFile(null)
-    setThumbnailPreview(null)
-    setAiContext("")
-  }, [reset])
+  const removeExistingVideo = useCallback((index: number) => {
+    setExistingVideos(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const removeNewVideo = useCallback((index: number) => {
+    setNewVideoFiles(prev => prev.filter((_, i) => i !== index))
+    setNewVideoPreviews(prev => {
+      const url = prev[index]
+      if (url && url.startsWith("blob:")) {
+        blobUrlsRef.current.delete(url)
+        URL.revokeObjectURL(url)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+  }, [])
 
   // generic list helpers
   const addStringToField = useCallback((value: string, fieldName: 'offers' | 'highlights' | 'sizes') => {
@@ -398,26 +517,40 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
         toast.error('Add at least one product image')
         return
       }
+      if (existingVideos.length + newVideoFiles.length > MAX_VIDEOS) {
+        toast.error('Only 1 product video is allowed')
+        return
+      }
       const form = new FormData()
       form.append('name', data.name)
-      if (data.brandId) form.append('brandId', data.brandId)
+      if (data.brandId && data.brandId !== 'none') {
+        form.append('brandId', data.brandId)
+      } else {
+        form.append('brandId', '')
+      }
       form.append('sellingPrice', String(data.sellingPrice))
       if (data.actualPrice !== undefined) form.append('actualPrice', String(data.actualPrice))
       if (data.mrp !== undefined) form.append('maximumRetailPrice', String(data.mrp))
-      form.append('stock', String(data.stock))
-      form.append('categoryId', data.categoryId)
+      form.append('stock', String(data.stock ?? 0))
+      if (data.categoryId && data.categoryId !== 'none') {
+        form.append('categoryId', data.categoryId)
+      } else {
+        form.append('categoryId', '')
+      }
       if (data.discount !== undefined) form.append('discount', String(data.discount))
       if (data.warranty) form.append('warranty', data.warranty)
+      if (data.hsnCode) form.append('hsnCode', data.hsnCode)
       if (data.description) form.append('description', data.description)
       if (data.homeDisplaySection) form.append('homeDisplaySection', data.homeDisplaySection)
       form.append('isActive', String(data.isActive))
+      form.append('syncToRag', String(data.syncToRag ?? true))
 
       if (thumbnailFile) form.append('thumbnail', thumbnailFile)
 
 
       // Append Arrays
-      // Append Arrays
       newFiles.forEach((f) => form.append('images', f))
+      newVideoFiles.forEach((f) => form.append('videos', f))
 
       if (data.offers && data.offers.length > 0) {
         data.offers.forEach(o => form.append('offers', o))
@@ -462,18 +595,31 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
         form.append('colors', '')
       }
 
-      // Removed Images
+      // Removed Images & Videos
       const removedUrls = (initialData?.images ?? []).filter(url => !existingImages.includes(url))
       removedUrls.forEach(u => form.append('removedImageUrls', u))
 
+      const removedVids: string[] = ((initialData as any)?.videos ?? []).filter((v: string) => !existingVideos.includes(v))
+      removedVids.forEach((v: string) => form.append('removedVideoUrls', v))
+
       await onSave(form)
+      if (!isEdit) {
+        resetLocal()
+      }
     } catch (err) {
       console.error(err)
     }
-  }, [existingImages, initialData, isEdit, newFiles, onSave, totalImageCount])
+  }, [existingImages, existingVideos, initialData, isEdit, newFiles, newVideoFiles, onSave, thumbnailFile, totalImageCount, resetLocal])
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open && !isEdit) {
+      resetLocal()
+    }
+    onOpenChange(open)
+  }, [isEdit, resetLocal, onOpenChange])
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[90vw] w-[90vw] xl:max-w-7xl max-h-[92vh] overflow-y-auto max-sm:w-screen max-sm:h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:p-4 max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:border-none">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -541,11 +687,16 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="brandId">Brand *</Label>
+                      <Label htmlFor="brandId">Brand (Optional)</Label>
                       <Controller control={control} name="brandId" render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange} disabled={brandsLoading}>
-                          <SelectTrigger><SelectValue placeholder="Select brand" /></SelectTrigger>
+                        <Select
+                          value={field.value || "none"}
+                          onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
+                          disabled={brandsLoading}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select brand (Optional)" /></SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="none">-- None / Optional --</SelectItem>
                             {brands?.map((b: any) => <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -553,11 +704,16 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
                       {errors.brandId && <p className="text-sm text-red-500">{errors.brandId.message}</p>}
                     </div>
                     <div>
-                      <Label>Category *</Label>
+                      <Label>Category (Optional)</Label>
                       <Controller control={control} name="categoryId" render={({ field }) => (
-                        <Select value={field.value} onValueChange={field.onChange} disabled={categoriesLoading}>
-                          <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                        <Select
+                          value={field.value || "none"}
+                          onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
+                          disabled={categoriesLoading}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select category (Optional)" /></SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="none">-- None / Optional --</SelectItem>
                             {categories?.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -574,9 +730,16 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
                     </p>
                   </div>
 
-                  <div>
-                    <Label>Warranty</Label>
-                    <Input {...register('warranty')} placeholder="e.g., 1 Year" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Warranty</Label>
+                      <Input {...register('warranty')} placeholder="e.g., 1 Year" />
+                    </div>
+                    <div>
+                      <Label>HSN / SAC Code (GST)</Label>
+                      <Input {...register('hsnCode')} placeholder="e.g., 9506" />
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Used for GST invoice classification</p>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -716,13 +879,18 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
 
             {/* Right Column */}
             <div className="space-y-6">
-              {/* Product Images */}
+              {/* Product Images & Video */}
               <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Product Images</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-blue-600" />
+                    Product Media (Images & Video)
+                  </CardTitle>
+                </CardHeader>
                 <CardContent>
                   {/* Thumbnail Section */}
                   <div className="mb-6 pb-6 border-b">
-                    <Label className="mb-2 block">Thumbnail Image (Mobile Optimized)</Label>
+                    <Label className="mb-2 block font-medium">Thumbnail Image (Listing & Mobile Optimized)</Label>
                     <div className="flex items-center gap-4">
                       <div className="relative w-24 h-24 border rounded-lg overflow-hidden bg-gray-50 dark:bg-muted/50 flex items-center justify-center shrink-0">
                         {thumbnailPreview ? (
@@ -742,6 +910,7 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
                       </div>
                       <div className="flex-1 space-y-2">
                         <Input
+                          ref={thumbnailInputRef}
                           type="file"
                           accept={ALLOWED_IMAGE_TYPES.join(',')}
                           onChange={(e) => {
@@ -767,43 +936,132 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
                     </div>
                   </div>
 
-                  <div className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors rounded-xl p-8 text-center cursor-pointer relative bg-muted/5 group">
-                    <input type="file" multiple accept={ALLOWED_IMAGE_TYPES.join(',')} onChange={handleFilesChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  {/* Main Media Dropzone */}
+                  <div className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors rounded-xl p-6 sm:p-8 text-center cursor-pointer relative bg-muted/5 group">
+                    <input
+                      ref={mediaInputRef}
+                      type="file"
+                      multiple
+                      accept={ALL_ALLOWED_MEDIA_TYPES.join(',')}
+                      onChange={handleFilesChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
                     <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-background rounded-full shadow-sm ring-1 ring-border group-hover:ring-primary/20 transition-all">
+                      <div className="p-4 bg-background rounded-full shadow-sm ring-1 ring-border group-hover:ring-primary/20 transition-all flex items-center gap-2">
                         <Upload className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <Video className="w-6 h-6 text-purple-600 transition-colors" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-medium text-sm">Click to select or drag and drop images</p>
+                        <p className="font-semibold text-sm">Click to select or drag & drop Images and Video</p>
                         <p className="text-xs text-muted-foreground">
-                          JPEG, PNG, WEBP up to 5MB (Max {MAX_IMAGES} images)
+                          Images: JPEG, PNG, WEBP (up to 5MB) &bull; Video: MP4, WEBM, MOV (Max 1, up to 50MB) &bull; Max {MAX_MEDIA} files
                         </p>
                       </div>
                     </div>
                   </div>
-                  {imageError && <p className="text-sm text-red-500 mt-2 font-medium flex items-center gap-2"><div className="w-1.5 h-1.5 bg-red-500 rounded-full" /> {imageError}</p>}
 
+                  {/* Quick Action Button for Video */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3 px-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (existingVideos.length + newVideoFiles.length >= MAX_VIDEOS) {
+                          toast.error("Only 1 product video is allowed. Remove the existing video first.");
+                          return;
+                        }
+                        videoInputRef.current?.click();
+                      }}
+                      disabled={existingVideos.length + newVideoFiles.length >= MAX_VIDEOS}
+                      className="flex items-center gap-1.5 text-xs font-semibold border-purple-500/40 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20 disabled:opacity-50"
+                    >
+                      <Video className="w-4 h-4 text-purple-600" />
+                      {existingVideos.length + newVideoFiles.length >= MAX_VIDEOS ? "Video Added (1/1)" : "Add Product Video"}
+                    </Button>
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept={ALLOWED_VIDEO_TYPES.join(',')}
+                      onChange={handleVideoFileChange}
+                      className="hidden"
+                    />
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {existingImages.length + newFiles.length} Image(s) &bull; {existingVideos.length + newVideoFiles.length}/1 Video
+                    </span>
+                  </div>
+
+                  {mediaError && (
+                    <p className="text-sm text-red-500 mt-2 font-medium flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full" /> {mediaError}
+                    </p>
+                  )}
+
+                  {/* Media Grid (Images & Videos) */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+                    {/* Existing Images */}
                     {existingImages.map((url, i) => (
-                      <div key={`ex-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-background shadow-sm">
+                      <div key={`ex-img-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-background shadow-sm">
                         <img src={url} alt={`ex-${i}`} className="w-full h-full object-contain" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={() => removeExistingImage(i)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        <Badge variant="secondary" className="absolute top-1 left-1 h-5 px-1.5 text-[10px] opacity-100">Existing</Badge>
+                        <Badge variant="secondary" className="absolute top-1 left-1 h-5 px-1.5 text-[10px] opacity-100">Existing Image</Badge>
                       </div>
                     ))}
+
+                    {/* New Images */}
                     {newPreviews.map((p, i) => (
-                      <div key={`new-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-background shadow-sm">
+                      <div key={`new-img-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-background shadow-sm">
                         <img src={p} alt={`new-${i}`} className="w-full h-full object-contain" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={() => removeNewImage(i)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        <Badge className="absolute top-1 left-1 h-5 px-1.5 text-[10px] bg-green-500 hover:bg-green-600">New</Badge>
+                        <Badge className="absolute top-1 left-1 h-5 px-1.5 text-[10px] bg-green-500 hover:bg-green-600">New Image</Badge>
+                      </div>
+                    ))}
+
+                    {/* Existing Video */}
+                    {existingVideos.map((url, i) => (
+                      <div key={`ex-vid-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-slate-950 shadow-sm flex items-center justify-center">
+                        <video src={url} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" muted preload="metadata" />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-9 h-9 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md">
+                            <Play className="w-4 h-4 fill-white ml-0.5" />
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                          <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={() => removeExistingVideo(i)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Badge className="absolute top-1 left-1 h-5 px-1.5 text-[10px] bg-red-600 hover:bg-red-700 text-white flex items-center gap-0.5">
+                          <Video className="w-2.5 h-2.5" /> Video
+                        </Badge>
+                      </div>
+                    ))}
+
+                    {/* New Video */}
+                    {newVideoPreviews.map((p, i) => (
+                      <div key={`new-vid-${i}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-slate-950 shadow-sm flex items-center justify-center">
+                        <video src={p} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" muted preload="metadata" />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-9 h-9 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md">
+                            <Play className="w-4 h-4 fill-white ml-0.5" />
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                          <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={() => removeNewVideo(i)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Badge className="absolute top-1 left-1 h-5 px-1.5 text-[10px] bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-0.5">
+                          <Video className="w-2.5 h-2.5" /> New Video
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -933,8 +1191,38 @@ export default function AddEditProductModal({ isOpen, onOpenChange, initialData,
             </div>
           </div>
 
+          {/* RAG Knowledge Base Sync Option */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border border-violet-200 dark:border-violet-800/60 rounded-xl">
+            <div className="flex items-center space-x-3">
+              <Controller
+                control={control}
+                name="syncToRag"
+                render={({ field }) => (
+                  <Checkbox
+                    id="syncToRag"
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                    className="data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600 size-5"
+                  />
+                )}
+              />
+              <div className="grid gap-1 leading-none cursor-pointer" onClick={() => setValue("syncToRag", !getValues("syncToRag"), { shouldDirty: true })}>
+                <Label htmlFor="syncToRag" className="text-sm font-semibold flex items-center gap-1.5 cursor-pointer text-violet-950 dark:text-violet-100">
+                  <Sparkles className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  Auto-sync with AI / RAG Knowledge Base
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Product details (title, specs, price & stock) will be automatically vectorized & added to RAG database.
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-[11px] bg-violet-100/50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800 whitespace-nowrap">
+              Instant AI Knowledge
+            </Badge>
+          </div>
+
           <div className="flex justify-end items-center gap-3 pt-6 border-t mt-4 sticky bottom-0 bg-background pb-6 sm:pb-0">
-            <Button type="button" variant="outline" onClick={() => { onOpenChange(false); resetLocal() }}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => { handleOpenChange(false); resetLocal(); }}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Product')}
             </Button>

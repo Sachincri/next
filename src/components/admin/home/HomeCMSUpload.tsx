@@ -40,6 +40,7 @@ import { SectionSettings } from "./components/SectionSettings";
 import { BrandCategorySettings } from "./components/BrandCategorySettings";
 import { HomePageSelector } from "./components/HomePageSelector";
 import { useUpdateHeaderLogoMutation } from "@/redux/api/homeApi";
+import { triggerHomeSeoRevalidate } from "@/lib/seo-utils";
 
 // ============================================================================
 // Validation Schemas
@@ -65,13 +66,17 @@ const carouselItemSchema = z.object({
 
 const seoSchema = z.object({
     title: z.string().min(1, "Page title is required").max(60, "Title must be 60 characters or less"),
+    description: z.string().max(160, "Description must be 160 characters or less").optional(),
     metaDescription: z.string().max(160, "Description must be 160 characters or less").optional(),
     slug: z.string()
         .min(1, "URL slug is required")
-        .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+        .refine(
+            (val) => val === "/" || /^[a-z0-9-]+$/.test(val),
+            'Slug must be "/" or only contain lowercase letters, numbers, and hyphens'
+        ),
     ogImage: z.union([
         z.string().refine(
-            (val) => !val || z.string().url().safeParse(val).success,
+            (val) => !val || val.startsWith("blob:") || z.string().url().safeParse(val).success,
             { message: "Please enter a valid image URL or leave empty" }
         ),
         z.object({
@@ -79,6 +84,13 @@ const seoSchema = z.object({
             public_id: z.string().optional()
         })
     ]).optional(),
+    ogTitle: z.string().max(100, "OG title must be 100 characters or less").optional(),
+    ogDescription: z.string().max(300, "OG description must be 300 characters or less").optional(),
+    noIndex: z.boolean().optional(),
+    canonicalUrl: z.string().refine(
+        (val) => !val || val.startsWith("/") || z.string().url().safeParse(val).success,
+        { message: "Please enter a valid Canonical URL (e.g. https://yourdomain.com/) or leave empty" }
+    ).optional(),
 });
 
 // ============================================================================
@@ -122,9 +134,14 @@ const HomeCMSIntegrated: FC = () => {
     // State
     const [seo, setSeo] = useState<IHomePageCMS["seo"]>({
         title: "",
+        description: "",
         metaDescription: "",
-        slug: "home",
+        slug: "/",
         ogImage: "",
+        ogTitle: "",
+        ogDescription: "",
+        noIndex: false,
+        canonicalUrl: "",
     });
 
     const [carousel, setCarousel] = useState<IHomePageCMS["carousel"]>({
@@ -162,9 +179,18 @@ const HomeCMSIntegrated: FC = () => {
     // Load data
     useEffect(() => {
         if (homeData) {
+            const loadedDesc = homeData.seo?.description || homeData.seo?.metaDescription || "";
             setSeo({
                 ...homeData.seo,
-                ogImage: homeData.seo?.ogImage // Preserve object structure
+                title: homeData.seo?.title || "",
+                description: loadedDesc,
+                metaDescription: loadedDesc,
+                slug: homeData.isActive ? "/" : (homeData.seo?.slug || "home"),
+                ogImage: homeData.seo?.ogImage || "",
+                ogTitle: homeData.seo?.ogTitle || "",
+                ogDescription: homeData.seo?.ogDescription || "",
+                noIndex: Boolean(homeData.seo?.noIndex),
+                canonicalUrl: homeData.seo?.canonicalUrl || "",
             });
 
             setHeaderLogo(homeData.headerLogo);
@@ -254,18 +280,20 @@ const HomeCMSIntegrated: FC = () => {
                         if (!section.products.heading || section.products.heading.trim() === "") {
                             throw new Error(`Section ${idx + 1}: Section heading is required`);
                         }
-                        if (section.products.items.length === 0) {
-                            throw new Error(`Section ${idx + 1}: At least one product/image is required`);
+                        if (section.products.items && section.products.items.length > 0) {
+                            section.products.items.forEach((item, pIdx) => {
+                                if (!item.image && !item.title) return; // Allow empty drafts
+                                if (!item.image) throw new Error(`Section ${idx + 1}, Item ${pIdx + 1}: Image is required`);
+                                if (!item.title) throw new Error(`Section ${idx + 1}, Item ${pIdx + 1}: Title is required`);
+                            });
                         }
-                        section.products.items.forEach((item, pIdx) => {
-                            if (!item.image) throw new Error(`Section ${idx + 1}, Item ${pIdx + 1}: Image is required`);
-                            if (!item.title) throw new Error(`Section ${idx + 1}, Item ${pIdx + 1}: Title is required`);
-                        });
                     } else if (section.type === "quad_grid") {
                         // Quad Grid Validation
                     } else if (section.type === "banner1" || section.type === "banner2" || section.type === "banner3") {
                         section.banners.forEach((banner, bIdx) => {
-                            if (!banner.image) throw new Error(`Section ${idx + 1}, Banner ${bIdx + 1}: Image is required`);
+                            const hasImg = typeof banner.image === 'object' ? !!(banner.image as any)?.url : !!banner.image;
+                            const hasVid = typeof banner.video === 'object' ? !!(banner.video as any)?.url : !!banner.video;
+                            if (!hasImg && !hasVid) throw new Error(`Section ${idx + 1}, Banner ${bIdx + 1}: Image or Video is required`);
                             if (!banner.title) throw new Error(`Section ${idx + 1}, Banner ${bIdx + 1}: Title is required`);
                         });
                     } else if (section.type === "video_reels") {
@@ -319,20 +347,33 @@ const HomeCMSIntegrated: FC = () => {
     const handleSaveSEO = async () => {
         if (!homeData || !homeData._id) return toast.error("Save the page first to enable modular updates");
 
+        const normalizedDesc = seo.description ?? seo.metaDescription ?? "";
+        const seoToSave = {
+            ...seo,
+            slug: homeData.isActive ? "/" : (seo.slug || "home"),
+            description: normalizedDesc,
+            metaDescription: normalizedDesc,
+            noIndex: Boolean(seo.noIndex),
+            ogTitle: seo.ogTitle || "",
+            ogDescription: seo.ogDescription || "",
+            canonicalUrl: seo.canonicalUrl?.trim() || "",
+        };
+
         try {
-            seoSchema.parse(seo);
+            seoSchema.parse(seoToSave);
+            setValidationErrors({});
         } catch (error) {
             if (error instanceof z.ZodError) {
                 const errors: Record<string, string> = {};
-                error.issues.forEach(err => errors[err.path.join(".")] = err.message);
+                error.issues.forEach(err => errors[`seo.${err.path.join(".")}`] = err.message);
                 setValidationErrors(errors);
-                return toast.error("Please fix SEO validation errors");
+                return toast.error(error.issues[0]?.message || "Please fix SEO validation errors");
             }
         }
 
         setSaveStatus("saving");
         const formData = new FormData();
-        const payload = cleanDataForSubmission(seo);
+        const payload = cleanDataForSubmission(seoToSave);
         formData.append("payload", JSON.stringify(payload));
 
         const ogImageUrl = typeof seo.ogImage === 'object' ? (seo.ogImage as any).url : seo.ogImage;
@@ -345,12 +386,22 @@ const HomeCMSIntegrated: FC = () => {
             const res = await updateSEO({ id: homeData._id, body: formData }).unwrap();
             setSaveStatus("saved");
             toast.success(res?.message || "SEO Settings Saved");
+            if (res?.data?.seo) {
+                const savedSeo = res.data.seo;
+                setSeo((prev) => ({
+                    ...prev,
+                    ...savedSeo,
+                    description: savedSeo.description || savedSeo.metaDescription || "",
+                    metaDescription: savedSeo.metaDescription || savedSeo.description || "",
+                }));
+            }
             // Clear pending files related to SEO
             if (seo.ogImage) {
                 const ogUrl = typeof seo.ogImage === 'object' ? (seo.ogImage as any).url : seo.ogImage;
                 const { [ogUrl]: _, ...rest } = pendingFiles;
                 setPendingFiles(rest);
             }
+            await triggerHomeSeoRevalidate();
         } catch (e: any) {
             setSaveStatus("error");
             toast.error(e?.data?.message || "Failed to save SEO");
@@ -480,6 +531,11 @@ const HomeCMSIntegrated: FC = () => {
                         const file = pendingFiles[img];
                         if (file) formData.append(`banners.${bIdx}.image`, file);
                     }
+                    const vid = typeof banner.video === 'object' ? (banner.video as any).url : banner.video;
+                    if (vid?.startsWith("blob:")) {
+                        const file = pendingFiles[vid];
+                        if (file) formData.append(`banners.${bIdx}.video`, file);
+                    }
                 });
             }
         }
@@ -550,7 +606,18 @@ const HomeCMSIntegrated: FC = () => {
         try {
             const formData = new FormData();
 
-            const dataPayload = cleanDataForSubmission({ seo, carousel, sections, isActive: true });
+            const normalizedDesc = seo.description ?? seo.metaDescription ?? "";
+            const seoForSubmit = {
+                ...seo,
+                slug: homeData?.isActive ? "/" : (seo.slug || "home"),
+                description: normalizedDesc,
+                metaDescription: normalizedDesc,
+                noIndex: Boolean(seo.noIndex),
+                ogTitle: seo.ogTitle || "",
+                ogDescription: seo.ogDescription || "",
+                canonicalUrl: seo.canonicalUrl?.trim() || "",
+            };
+            const dataPayload = cleanDataForSubmission({ seo: seoForSubmit, carousel, sections, isActive: homeData?.isActive ?? true });
             formData.append("payload", JSON.stringify(dataPayload));
 
             const logoUrl = typeof headerLogo === 'object' ? headerLogo.url : headerLogo;
@@ -599,6 +666,11 @@ const HomeCMSIntegrated: FC = () => {
                             const file = pendingFiles[img];
                             if (file) formData.append(`sections.${sIdx}.banners.${bIdx}.image`, file);
                         }
+                        const vid = typeof banner.video === 'object' ? (banner.video as any).url : banner.video;
+                        if (vid?.startsWith("blob:")) {
+                            const file = pendingFiles[vid];
+                            if (file) formData.append(`sections.${sIdx}.banners.${bIdx}.video`, file);
+                        }
                     });
                 } else if (section.type === "video_reels" && (section as any).videoReels) {
                     ((section as any).videoReels || []).forEach((reel: any, rIdx: number) => {
@@ -620,6 +692,7 @@ const HomeCMSIntegrated: FC = () => {
             setSaveStatus("saved");
             toast.success(res?.message || "Home page saved successfully");
             setPendingFiles({});
+            await triggerHomeSeoRevalidate();
         } catch (error: any) {
             setSaveStatus("error");
             const serverErrors = error?.data?.errors;
@@ -658,7 +731,7 @@ const HomeCMSIntegrated: FC = () => {
                 id: Date.now(),
                 order: newOrder,
                 type: "products",
-                products: { heading: "", items: [{ image: "", title: "", subtitle: "", redirectLink: "" }] },
+                products: { heading: "Products Slider", items: [] },
             };
             setSections(prev => [...prev, newSection]);
             setOpenSectionId(newSection.id);
@@ -678,7 +751,7 @@ const HomeCMSIntegrated: FC = () => {
                 id: Date.now(),
                 order: newOrder,
                 type: sectionType,
-                banners: Array.from({ length: bannerCount }, () => ({ image: "", title: "", redirectLink: "" })),
+                banners: Array.from({ length: bannerCount }, () => ({ image: "", title: "", ctaText: "Shop Now", redirectLink: "" })),
             };
             setSections(prev => [...prev, newSection as any]);
             setOpenSectionId(newSection.id);
@@ -757,11 +830,16 @@ const HomeCMSIntegrated: FC = () => {
     };
 
     const updateBannerInSection = (sectionId: number, bannerIndex: number, field: keyof Banner, value: string, file?: File) => {
-        if (field === "image" && file) setPendingFiles(prev => ({ ...prev, [value]: file }));
+        if ((field === "image" || (field as string) === "video") && file) setPendingFiles(prev => ({ ...prev, [value]: file }));
         setSections(prev => prev.map(s => {
             if (s.id === sectionId && (s.type === "banner1" || s.type === "banner2" || s.type === "banner3")) {
                 const newBanners = [...s.banners];
                 newBanners[bannerIndex] = { ...newBanners[bannerIndex], [field]: value };
+                if (field === "image" && value) {
+                    newBanners[bannerIndex].video = "";
+                } else if ((field as string) === "video" && value) {
+                    newBanners[bannerIndex].image = "";
+                }
                 return { ...s, banners: newBanners };
             }
             return s;
@@ -769,7 +847,7 @@ const HomeCMSIntegrated: FC = () => {
     };
 
     const addProductToSection = (sectionId: number) => {
-        setSections(prev => prev.map(s => (s.id === sectionId && s.type === "products" ? { ...s, products: { ...s.products, items: [...s.products.items, { image: "", title: "", subtitle: "", redirectLink: "" }] } } : s)));
+        setSections(prev => prev.map(s => (s.id === sectionId && s.type === "products" ? { ...s, products: { ...s.products, items: [...(s.products.items || []), { image: "", title: "", subtitle: "", redirectLink: "" }] } } : s)));
     };
 
     const updateProductInSection = (sectionId: number, productIndex: number, field: keyof CarouselItem, value: string, file?: File) => {
@@ -787,7 +865,6 @@ const HomeCMSIntegrated: FC = () => {
     const removeProductFromSection = (sectionId: number, productIndex: number) => {
         setSections(prev => prev.map(s => {
             if (s.id === sectionId && s.type === "products") {
-                if (s.products.items.length === 1) { toast.error("At least one product is required"); return s; }
                 return { ...s, products: { ...s.products, items: s.products.items.filter((_, i) => i !== productIndex) } };
             }
             return s;
@@ -971,6 +1048,8 @@ const HomeCMSIntegrated: FC = () => {
                                     isOpen={expandedSections.seo} onToggle={() => setExpandedSections(p => ({ ...p, seo: !p.seo }))}
                                     onSave={handleSaveSEO}
                                     onFileChange={(file, url) => setPendingFiles(prev => ({ ...prev, [url]: file }))}
+                                    isLiveHomePage={Boolean(homeData?.isActive)}
+                                    isSaving={seoLoading}
                                 />
                                 <HeaderSettings
                                     headerLogo={headerLogo}

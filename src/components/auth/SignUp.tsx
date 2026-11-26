@@ -23,8 +23,9 @@ const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   otp: z.string().optional(),
   terms: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms and conditions",
+    message: "You must acknowledge the Privacy Notice and Terms to create an account",
   }),
+  marketingConsent: z.boolean().optional(),
 });
 
 type SignupFormData = z.infer<typeof signupSchema>
@@ -50,6 +51,10 @@ export default function Signup() {
     getValues,
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+      terms: false,
+      marketingConsent: false,
+    },
   })
 
   const startCountdown = () => {
@@ -68,7 +73,16 @@ export default function Signup() {
     try {
       if (!otpSent) {
         // STEP 1: Register + Send OTP
-        const res = await registerServer(data).unwrap();
+        const payload = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          password: data.password,
+          privacyNoticeAccepted: true,
+          marketingEmailConsent: Boolean(data.marketingConsent),
+          marketingWhatsappConsent: Boolean(data.marketingConsent),
+        };
+        const res = await registerServer(payload as any).unwrap();
         setOtpSent(true);
         startCountdown();
         toast.success(res?.message || "OTP sent to your email");
@@ -248,31 +262,46 @@ export default function Signup() {
             </div>
           )}
 
-          {/* Terms & Conditions */}
+          {/* Explicit DPDP Consent Checkboxes (Always Unticked by Default) */}
           {!otpSent && (
-            <div className="flex items-start gap-2">
-              <input
-                {...register('terms')}
-                type="checkbox"
-                id="terms"
-                className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded focus:ring-indigo-500"
-              />
-              <label htmlFor="terms" className="text-sm text-gray-600 dark:text-slate-400">
-                I agree to the{' '}
-                <a href="#" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
-                  Terms & Conditions
-                </a>{' '}
-                and{' '}
-                <a href="#" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
-                  Privacy Policy
-                </a>
-              </label>
+            <div className="space-y-3 pt-1">
+              <div className="flex items-start gap-2.5">
+                <input
+                  {...register('terms')}
+                  type="checkbox"
+                  id="terms"
+                  className="mt-1 w-4 h-4 shrink-0 text-indigo-600 border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="terms" className="text-xs leading-relaxed text-gray-600 dark:text-slate-300 cursor-pointer">
+                  I have read and agree to the{' '}
+                  <Link href="/privacy-policy" target="_blank" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                    Privacy Notice
+                  </Link>{' '}
+                  for processing my order/account data, and accept the{' '}
+                  <Link href="/terms" target="_blank" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                    Terms &amp; Conditions
+                  </Link>
+                  . <span className="text-red-500">*</span>
+                </label>
+              </div>
+              {errors.terms && (
+                <p className="text-red-500 dark:text-red-400 text-xs flex items-center gap-1">
+                  <span className="font-medium">⚠</span> {errors.terms.message}
+                </p>
+              )}
+
+              <div className="flex items-start gap-2.5">
+                <input
+                  {...register('marketingConsent')}
+                  type="checkbox"
+                  id="marketingConsent"
+                  className="mt-1 w-4 h-4 shrink-0 text-indigo-600 border-gray-300 dark:border-slate-600 dark:bg-slate-700 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="marketingConsent" className="text-xs leading-relaxed text-gray-600 dark:text-slate-300 cursor-pointer">
+                  I agree to receive promotional offers and updates via WhatsApp &amp; Email (you can opt out anytime).
+                </label>
+              </div>
             </div>
-          )}
-          {errors.terms && (
-            <p className="text-red-500 dark:text-red-400 text-xs flex items-center gap-1">
-              <span className="font-medium">⚠</span> {errors.terms.message}
-            </p>
           )}
 
           {/* Submit Button */}

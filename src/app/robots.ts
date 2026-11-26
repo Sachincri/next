@@ -1,7 +1,10 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
+import { resolveRequestSiteUrl } from '@/lib/seo-server';
 
-export default function robots(): MetadataRoute.Robots {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+export const dynamic = 'force-dynamic';
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+    const baseUrl = await resolveRequestSiteUrl();
     return {
         rules: {
             userAgent: '*',
@@ -9,5 +12,5 @@ export default function robots(): MetadataRoute.Robots {
             disallow: ['/admin/', '/me/'],
         },
         sitemap: `${baseUrl}/sitemap.xml`,
-    }
+    };
 }

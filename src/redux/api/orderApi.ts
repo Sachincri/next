@@ -26,7 +26,10 @@ export const orderApi = apiSlice.injectEndpoints({
             query: () => "/payment/key",
             transformResponse: (response: any) => response.data,
         }),
-        createRazorpayOrder: builder.mutation<{ order: any; orderOptions: any }, { amount: number; currency?: string; notes?: any }>({
+        createRazorpayOrder: builder.mutation<
+            { order: any; orderOptions?: any; isPartialCod?: boolean; advanceAmount?: number; remainingAmount?: number; totalAmount?: number },
+            { amount: number; currency?: string; notes?: any; isPartialCod?: boolean }
+        >({
             query: (body) => ({
                 url: "/payment/order",
                 method: "POST",

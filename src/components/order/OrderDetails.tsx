@@ -6,11 +6,13 @@ import { useGetMyDisputesQuery } from "@/redux/api/disputeApi";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useGetOrderDetailsQuery, useGetOrderTrackingQuery } from "@/redux/api/orderApi";
+import { useGetPublicSettingsQuery } from "@/redux/api/homeApi";
 import { Loader } from "@/components/layout/Loader";
 import { ArrowLeft, Download, Phone, Star, Truck, Package, ShieldCheck, MapPin, ExternalLink, ShieldAlert, AlertTriangle, Clock } from "lucide-react";
 import { OrderTracker } from "./TrackStepper";
 import Link from "next/link";
 import Image from "next/image";
+import { printInvoice } from "@/components/admin/orders/invoice-template";
 
 const OrderDetails = () => {
   const router = useRouter();
@@ -22,6 +24,7 @@ const OrderDetails = () => {
     skip: !params?.id || !isAutomatedShipment 
   });
   const [isDisputeOpen, setIsDisputeOpen] = useState(false);
+  const { data: publicSettings } = useGetPublicSettingsQuery();
   const { data: disputesData } = useGetMyDisputesQuery(undefined, { skip: !params?.id });
   const activeDispute = disputesData?.data?.claims?.find((c: any) => String(c.order?._id || c.order) === String(params?.id));
 
@@ -44,7 +47,9 @@ const OrderDetails = () => {
   };
 
   const handlePrintInvoice = () => {
-    window.print();
+    if (order) {
+      printInvoice(order, publicSettings);
+    }
   };
 
   return (
@@ -157,9 +162,9 @@ const OrderDetails = () => {
 
                 {/* Tracking Stepper */}
                 <OrderTracker
-                  status={order?.orderStatus || 'Processing'}
+                  status={order?.orderStatus || 'Ordered'}
                   orderOn={order?.createdAt || ''}
-                  processingAt={order?.processingAt || order?.createdAt || ''}
+                  processingAt={order?.processingAt}
                   shippedAt={order?.shippedAt}
                   deliveredAt={order?.deliveredAt}
                   trackingData={trackingData}
@@ -246,9 +251,28 @@ const OrderDetails = () => {
                       </div>
                     )}
                     <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex justify-between font-bold text-sm sm:text-base">
-                      <span className="text-slate-900 dark:text-white">Total Paid</span>
+                      <span className="text-slate-900 dark:text-white">
+                        {order?.paymentInfo?.method === 'COD' ? 'Total Amount' : (order?.isPartialCod || order?.paymentInfo?.method === 'Partial COD') ? 'Order Total' : 'Total Paid'}
+                      </span>
                       <span className="text-indigo-600 dark:text-indigo-400">₹{order?.totalPrice?.toLocaleString()}</span>
                     </div>
+                    {Boolean((order as any)?.gstAmount || (order as any)?.taxableAmount) && (
+                      <p className="text-[11px] text-slate-400 text-right mt-0.5">
+                        Inclusive of ₹{Number((order as any).gstAmount).toFixed(2)} GST
+                      </p>
+                    )}
+                    {Boolean(order?.isPartialCod || order?.paymentInfo?.method === "Partial COD") && (
+                      <div className="pt-2 border-t border-dashed border-slate-200 dark:border-slate-700 space-y-1 text-xs">
+                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                          <span>Advance Paid (Online)</span>
+                          <span>₹{Number(order?.advancePayment ?? order?.paymentInfo?.advanceAmount ?? 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-indigo-600 dark:text-indigo-400 font-bold">
+                          <span>Cash Due on Delivery</span>
+                          <span>₹{Number(order?.remainingBalance ?? order?.paymentInfo?.dueAmount ?? 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

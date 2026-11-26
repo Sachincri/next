@@ -1,14 +1,50 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Facebook, Twitter, Instagram, Linkedin, MapPin, Phone, CreditCard } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin, MapPin, Phone, CreditCard, Cookie, Mail, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useCookieConsent } from '@/components/privacy/CookieConsentContext';
+import { useRecordConsentMutation } from '@/redux/api/privacyApi';
 
 export function Footer() {
   const pathname = usePathname();
   const isCheckoutPage = ['/shipping', '/order-summary', '/payment'].includes(pathname);
   const currentYear = new Date().getFullYear();
+  const { openPreferences, anonymousId } = useCookieConsent();
+  const [recordConsent, { isLoading: subscribing }] = useRecordConsentMutation();
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterPrivacyAccepted, setNewsletterPrivacyAccepted] = useState(false);
+  const [newsletterMarketingOptIn, setNewsletterMarketingOptIn] = useState(false);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim() || !/^\S+@\S+\.\S+$/.test(newsletterEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    if (!newsletterPrivacyAccepted) {
+      toast.error('Please read and agree to the Privacy Notice before subscribing');
+      return;
+    }
+    try {
+      await recordConsent({
+        anonymousId,
+        email: newsletterEmail.trim(),
+        source: 'newsletter',
+        privacyNoticeAccepted: true,
+        emailMarketing: newsletterMarketingOptIn,
+        whatsappMarketing: newsletterMarketingOptIn,
+      }).unwrap();
+      toast.success('Subscribed! Your newsletter privacy preferences have been saved.');
+      setNewsletterEmail('');
+      setNewsletterPrivacyAccepted(false);
+      setNewsletterMarketingOptIn(false);
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Could not save subscription preferences');
+    }
+  };
 
   if (isCheckoutPage) {
     return (
@@ -50,9 +86,9 @@ export function Footer() {
     {
       title: 'Legal',
       links: [
-        { name: 'Privacy Policy', href: '/privacy' },
+        { name: 'Privacy Policy', href: '/privacy-policy' },
         { name: 'Terms of Service', href: '/terms' },
-        { name: 'Cookie Policy', href: '/cookies' },
+        { name: 'Cookie Policy', href: '/privacy-policy#cookies' },
         { name: 'Accessibility', href: '/accessibility' },
       ],
     },
@@ -149,9 +185,90 @@ export function Footer() {
                     </Link>
                   </li>
                 ))}
+                {section.title === 'Legal' && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={openPreferences}
+                      className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-left"
+                    >
+                      <Cookie className="w-3.5 h-3.5" />
+                      Cookie Preferences
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
           ))}
+        </div>
+
+        {/* DPDP Compliant Newsletter Signup */}
+        <div className="mt-12 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
+          <form onSubmit={handleNewsletterSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-5 space-y-1.5">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                <Mail className="w-3.5 h-3.5" />
+                Newsletter
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                Get product drops &amp; exclusive store updates
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Opt in explicitly below. You can withdraw marketing consent anytime from your account.
+              </p>
+            </div>
+
+            <div className="lg:col-span-7 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="email"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  aria-label="Newsletter email address"
+                  className="flex-1 h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="submit"
+                  disabled={subscribing}
+                  className="h-10 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
+                >
+                  {subscribing && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Subscribe
+                </button>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <label className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newsletterPrivacyAccepted}
+                    onChange={(e) => setNewsletterPrivacyAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                  />
+                  <span>
+                    I have read and agree to the{' '}
+                    <Link href="/privacy-policy" className="text-indigo-600 dark:text-indigo-400 underline font-medium">
+                      Privacy Notice
+                    </Link>{' '}
+                    for processing my subscription data. <span className="text-red-500">*</span>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newsletterMarketingOptIn}
+                    onChange={(e) => setNewsletterMarketingOptIn(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
+                  />
+                  <span>
+                    I agree to receive promotional offers and updates via WhatsApp &amp; Email (you can opt out anytime).
+                  </span>
+                </label>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
 

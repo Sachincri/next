@@ -25,21 +25,20 @@ export interface ChartConfigData {
 }
 
 const CHART_COLORS = [
-  "#10b981", "#818cf8", "#f59e0b", "#ec4899",
-  "#06b6d4", "#a855f7", "#3b82f6", "#14b8a6",
-  "#e11d48", "#84cc16"
+  "#4f46e5", "#0ea5e9", "#6366f1", "#10b981",
+  "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6",
 ]
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="rounded-xl border border-white/10 bg-gray-950/95 px-3 py-2.5 shadow-2xl backdrop-blur-md">
-        <p className="text-xs font-semibold text-gray-300 mb-1">{label}</p>
+      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg">
+        <p className="text-xs font-semibold text-slate-700 mb-1">{label}</p>
         {payload.map((item: any, idx: number) => (
           <div key={idx} className="flex items-center gap-2 text-xs">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-gray-400 font-medium">{item.name || item.dataKey}:</span>
-            <span className="font-bold text-white">
+            <span className="text-slate-500 font-medium">{item.name || item.dataKey}:</span>
+            <span className="font-bold text-slate-900">
               {typeof item.value === "number"
                 ? item.value >= 1000
                   ? `₹${(item.value / 1000).toFixed(1)}K`
@@ -62,17 +61,19 @@ export default function AiDynamicChart({
   chartConfig?: ChartConfigData
 }) {
   const activeChart = chartConfig || chart
-  if (!activeChart) return null
 
-  const chartType = activeChart.chartType || activeChart.type || "bar"
-  const xKey = activeChart.xAxisKey || activeChart.xKey || "name"
-  const series =
-    activeChart.series && activeChart.series.length > 0
-      ? activeChart.series
-      : [{ dataKey: activeChart.yKey || "value", name: "Value", color: "#10b981" }]
+  const chartType = activeChart?.chartType || activeChart?.type || "bar"
+  const xKey = activeChart?.xAxisKey || activeChart?.xKey || "name"
+  const series = useMemo(
+    () =>
+      activeChart?.series && activeChart.series.length > 0
+        ? activeChart.series
+        : [{ dataKey: activeChart?.yKey || "value", name: "Value", color: "#4f46e5" }],
+    [activeChart]
+  )
 
   const formattedData = useMemo(() => {
-    return (activeChart.data || []).map((item) => {
+    return (activeChart?.data || []).map((item) => {
       const row: Record<string, any> = { ...item }
       row.name =
         item[xKey] ||
@@ -84,7 +85,6 @@ export default function AiDynamicChart({
         item.name ||
         ""
 
-      // Ensure primary metric has a numerical value
       series.forEach((s) => {
         row[s.dataKey] = Number(
           item[s.dataKey] ?? item.value ?? item.revenue ?? item.orders ?? item.count ?? 0
@@ -93,34 +93,34 @@ export default function AiDynamicChart({
 
       return row
     })
-  }, [activeChart.data, xKey, series])
+  }, [activeChart?.data, xKey, series])
 
-  if (!activeChart.data || activeChart.data.length === 0) return null
+  if (!activeChart || !activeChart.data || activeChart.data.length === 0) return null
 
   const commonAxisProps = {
-    tick: { fill: "#9ca3af", fontSize: 10 },
-    axisLine: { stroke: "#374151" },
-    tickLine: { stroke: "#374151" },
+    tick: { fill: "#64748b", fontSize: 11 },
+    axisLine: { stroke: "#e2e8f0" },
+    tickLine: { stroke: "#e2e8f0" },
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-gray-950/80 via-gray-900/50 to-gray-950/80 p-4 shadow-xl backdrop-blur-md">
+    <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+        <h4 className="text-xs font-semibold text-slate-900">
           {activeChart.title}
         </h4>
-        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
           {chartType}
         </span>
       </div>
 
-      <div className="h-[230px] w-full">
+      <div className="h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           {chartType === "bar" ? (
             <BarChart data={formattedData} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="name" {...commonAxisProps} />
-              <YAxis {...commonAxisProps} tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v)} />
+              <YAxis {...commonAxisProps} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : v)} />
               <Tooltip content={<CustomTooltip />} />
               {series.map((s, idx) => (
                 <Bar
@@ -137,13 +137,13 @@ export default function AiDynamicChart({
                     ))}
                 </Bar>
               ))}
-              {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} />}
+              {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} />}
             </BarChart>
           ) : chartType === "line" ? (
             <LineChart data={formattedData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="name" {...commonAxisProps} />
-              <YAxis {...commonAxisProps} tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v)} />
+              <YAxis {...commonAxisProps} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : v)} />
               <Tooltip content={<CustomTooltip />} />
               {series.map((s, idx) => (
                 <Line
@@ -157,7 +157,7 @@ export default function AiDynamicChart({
                   activeDot={{ r: 6, fill: s.color || CHART_COLORS[idx % CHART_COLORS.length], stroke: "#ffffff", strokeWidth: 2 }}
                 />
               ))}
-              {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} />}
+              {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} />}
             </LineChart>
           ) : chartType === "area" ? (
             <AreaChart data={formattedData}>
@@ -166,15 +166,15 @@ export default function AiDynamicChart({
                   const color = s.color || CHART_COLORS[idx % CHART_COLORS.length]
                   return (
                     <linearGradient key={s.dataKey} id={`areaGrad-${s.dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={color} stopOpacity={0.4} />
+                      <stop offset="5%" stopColor={color} stopOpacity={0.25} />
                       <stop offset="95%" stopColor={color} stopOpacity={0.0} />
                     </linearGradient>
                   )
                 })}
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="name" {...commonAxisProps} />
-              <YAxis {...commonAxisProps} tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v)} />
+              <YAxis {...commonAxisProps} tickFormatter={(v) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}K` : v)} />
               <Tooltip content={<CustomTooltip />} />
               {series.map((s, idx) => {
                 const color = s.color || CHART_COLORS[idx % CHART_COLORS.length]
@@ -190,7 +190,7 @@ export default function AiDynamicChart({
                   />
                 )
               })}
-              {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} />}
+              {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} />}
             </AreaChart>
           ) : (
             <PieChart>
@@ -199,7 +199,7 @@ export default function AiDynamicChart({
                 cx="50%"
                 cy="50%"
                 innerRadius={55}
-                outerRadius={85}
+                outerRadius={82}
                 dataKey={series[0]?.dataKey || "value"}
                 nameKey="name"
                 paddingAngle={3}
@@ -210,7 +210,7 @@ export default function AiDynamicChart({
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11, color: "#9ca3af" }} iconType="circle" iconSize={8} />
+              <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} iconType="circle" iconSize={8} />
             </PieChart>
           )}
         </ResponsiveContainer>

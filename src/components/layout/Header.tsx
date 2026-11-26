@@ -118,17 +118,17 @@ export function Header() {
 
   return (
     <nav className={`bg-[#0d0e26] sticky top-0 w-full z-50 shadow-md transition-transform duration-300 ease-in-out pt-[env(safe-area-inset-top,0px)] ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-      <div className="container-custom">
-        <div className="flex justify-between md:justify-center items-center h-20 md:gap-8">
+      <div className="container-custom px-3 sm:px-4">
+        <div className="flex justify-between md:justify-center items-center h-16 md:h-20 gap-2 md:gap-8">
           {/* Mobile menu & Logo Group */}
-          <div className="flex items-center space-x-0">
-            <div className="lg:hidden">
+          <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+            <div className="lg:hidden shrink-0">
               <DrawerComponent listArray={userMenuItems} />
             </div>
 
-            <Link href="/" className="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors">
+            <Link href="/" className="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors shrink-0">
               {logoUrl ? (
-                <div className="relative h-14 w-30 md:w-48">
+                <div className="relative h-10 w-24 sm:h-12 sm:w-36 md:h-14 md:w-48">
                   <Image
                     src={logoUrl}
                     alt="Logo"
@@ -139,7 +139,7 @@ export function Header() {
                 </div>
               ) : (
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold tracking-tight">E-Store</span>
+                  <span className="text-lg sm:text-xl font-bold tracking-tight">E-Store</span>
                   <span className="text-[10px] opacity-80 flex items-center">
                     Explore <span className="text-yellow-400 font-bold ml-1 italic">Plus</span>
                   </span>
@@ -154,11 +154,11 @@ export function Header() {
           </div>
 
           {/* User menu */}
-          <div className="flex items-center space-x-3 sm:space-x-8">
+          <div className="flex items-center gap-1.5 sm:gap-5 md:gap-7 shrink-0">
             {/* User Notifications */}
             {mounted && isAuthenticated && (
-              <div className="text-white">
-                <NotificationsPopover />
+              <div className="text-white flex items-center">
+                <NotificationsPopover triggerClassName="text-white hover:text-white hover:bg-white/10 focus-visible:ring-white/30" />
               </div>
             )}
 
@@ -167,34 +167,34 @@ export function Header() {
               {mounted && isAuthenticated ? (
                 <Link
                   href="/me"
-                  className="flex items-center space-x-1.5 sm:space-x-2 text-white hover:text-blue-200 transition-colors py-2"
+                  className="flex items-center gap-1 sm:gap-2 text-white hover:text-blue-200 transition-colors py-2 px-1"
                 >
-                  <User className="w-4 h-4 text-slate-300" />
-                  <span className="font-medium text-xs sm:text-sm max-w-[80px] sm:max-w-[120px] truncate">
+                  <User className="w-4 h-4 text-slate-300 shrink-0" />
+                  <span className="font-medium text-xs sm:text-sm max-w-[64px] sm:max-w-[120px] truncate">
                     {user?.name || 'Account'}
                   </span>
                 </Link>
               ) : (
                 <Link
                   href="/login"
-                  className="flex items-center space-x-1 bg-white text-[#0d0e26] hover:bg-slate-100 font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-md text-xs sm:text-sm transition-all shadow-xs"
+                  className="flex items-center space-x-1 bg-white text-[#0d0e26] hover:bg-slate-100 font-bold px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-md text-xs sm:text-sm transition-all shadow-xs"
                 >
                   <User className="w-3.5 h-3.5 text-[#0d0e26]" />
                   <span>Login</span>
                 </Link>
               )}
 
-              <div className="absolute top-full left-0 h-2 w-full bg-transparent" />
+              <div className="hidden md:block absolute top-full left-0 h-2 w-full bg-transparent" />
 
-              {/* Dropdown menu for authenticated users */}
+              {/* Dropdown menu for authenticated users (desktop hover) */}
               {mounted && isAuthenticated && (
-                <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-slate-800 rounded-md shadow-xl dark:shadow-slate-900/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-100 dark:border-slate-700 overflow-hidden z-[60]">
+                <div className="hidden md:block absolute right-0 mt-0 w-48 bg-white dark:bg-slate-800 rounded-md shadow-xl dark:shadow-slate-900/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border border-gray-100 dark:border-slate-700 overflow-hidden z-[60]">
                   <div className="py-1">
                     {userMenuItems.map((item) => (
                       <Link
                         key={item.path}
                         href={item.path}
-                        className="flex items-center My Orders space-x-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0"
                       >
                         <span className="text-gray-500 dark:text-slate-400">{item.icon}</span>
                         <span>{item.name}</span>
@@ -217,7 +217,7 @@ export function Header() {
             {/* Cart */}
             <Link
               href="/cart"
-              className="relative flex items-center space-x-2 text-white hover:text-blue-200 transition-colors py-2"
+              className="relative flex items-center space-x-2 text-white hover:text-blue-200 transition-colors py-2 px-1"
             >
               <div className="relative">
                 <ShoppingCart className="w-5 h-5" />

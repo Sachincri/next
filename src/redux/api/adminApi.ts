@@ -1,5 +1,5 @@
 import { apiSlice } from "./apiSlice";
-import { User, Product, Order, DashboardStats, ProductAnalytics, CustomerAnalytics } from "@/types";
+import { User, Product, Order, DashboardStats, ProductAnalytics, CustomerAnalytics, AnalyticsOverviewData } from "@/types";
 
 export const adminApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
@@ -54,17 +54,27 @@ export const adminApi = apiSlice.injectEndpoints({
             providesTags: ["User", "Admin"],
             transformResponse: (response: any) => response.data.users,
         }),
-        getAllOrders: builder.query<{ orders: Order[]; totalOrders: number; totalPages: number; currentPage: number }, { page?: number; limit?: number; status?: string; search?: string } | void>({
+        getAllOrders: builder.query<{ orders: Order[]; totalOrders: number; totalPages: number; currentPage: number; totalRevenue?: number }, {
+            page?: number;
+            limit?: number;
+            status?: string;
+            payment?: string;
+            paymentMethod?: string;
+            startDate?: string;
+            endDate?: string;
+            minAmount?: number | string;
+            maxAmount?: number | string;
+            sortBy?: string;
+            search?: string;
+        } | void>({
             query: (params) => {
                 const queryParams = new URLSearchParams();
                 if (params) {
-                    if (params.page) queryParams.append("page", params.page.toString());
-                    if (params.limit) queryParams.append("limit", params.limit.toString());
-                    if (params.status) queryParams.append("status", params.status);
-                    // Search assumes backend supports it, if not we might need to add it to backend controller first. 
-                    // Looking at order.controller.ts, it DOES NOT support search. 
-                    // Only filter by status. 
-                    // So let's stick to what is supported for now or update controller.
+                    Object.entries(params).forEach(([key, val]) => {
+                        if (val !== undefined && val !== null && val !== "" && val !== "all") {
+                            queryParams.append(key, String(val));
+                        }
+                    });
                 }
                 return `/admin/orders?${queryParams.toString()}`;
             },
@@ -149,7 +159,7 @@ export const adminApi = apiSlice.injectEndpoints({
                 method: "PUT",
                 body: settings,
             }),
-            invalidatesTags: ["Admin"],
+            invalidatesTags: ["Admin", "Home"],
         }),
         refundOrder: builder.mutation<{ message: string }, { paymentId: string; amount?: number; reason?: string }>({
             query: (body) => ({
@@ -191,14 +201,14 @@ export const adminApi = apiSlice.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["Admin"],
+            invalidatesTags: ["Admin", "Home"],
         }),
         deleteCoupon: builder.mutation<any, string>({
             query: (id) => ({
                 url: `/coupons/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["Admin"],
+            invalidatesTags: ["Admin", "Home"],
         }),
         assignCoupon: builder.mutation<any, { couponId: string; userId: string }>({
             query: (data) => ({
@@ -221,23 +231,115 @@ export const adminApi = apiSlice.injectEndpoints({
             providesTags: ["Admin"],
             transformResponse: (response: any) => response.data,
         }),
-        generateCampaignData: builder.mutation<{ pushTitle?: string; pushBody?: string; pushDeepLink?: string; whatsappText?: string; whatsappButtons?: string[]; emailSubject?: string; emailHtml?: string; imageUrl?: string | null; storeName?: string; storeLogo?: string }, { topic: string; type: string; channels: string[] }>({
+        getAnalyticsOverview: builder.query<
+            AnalyticsOverviewData,
+            { preset?: string; startDate?: string; endDate?: string } | void
+        >({
+            query: (params) => {
+                const search = new URLSearchParams();
+                if (params?.preset) search.set("preset", params.preset);
+                if (params?.startDate) search.set("startDate", params.startDate);
+                if (params?.endDate) search.set("endDate", params.endDate);
+                const qs = search.toString();
+                return `/admin/analytics/overview${qs ? `?${qs}` : ""}`;
+            },
+            providesTags: ["Admin", "Order", "Product"],
+            transformResponse: (response: any) => response.data,
+        }),
+        getCampaignSegmentCounts: builder.query<Record<string, number>, void>({
+            query: () => "/campaigns/segments/counts",
+            providesTags: ["Admin"],
+            transformResponse: (response: any) => response.data,
+        }),
+        getCampaignHistory: builder.query<any[], void>({
+            query: () => "/campaigns",
+            providesTags: ["Admin"],
+            transformResponse: (response: any) => response.data || [],
+        }),
+        deleteCampaign: builder.mutation<{ message: string }, string>({
+            query: (id) => ({
+                url: `/campaigns/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Admin"],
+        }),
+        generateCampaignData: builder.mutation<
+            {
+                campaignId?: string;
+                pushTitle?: string;
+                pushBody?: string;
+                pushDeepLink?: string;
+                whatsappText?: string;
+                whatsappButtons?: string[];
+                emailSubject?: string;
+                emailHtml?: string;
+                imageUrl?: string | null;
+                storeName?: string;
+                storeLogo?: string;
+                ctaUrl?: string;
+                couponCode?: string;
+            },
+            {
+                topic: string;
+                type: string;
+                tone?: string;
+                channels: string[];
+                couponId?: string;
+                productId?: string;
+                categoryId?: string;
+                ctaUrl?: string;
+            }
+        >({
             query: (args) => ({
                 url: `/campaigns/generate`,
                 method: "POST",
-                body: args
+                body: args,
             }),
+            invalidatesTags: ["Admin"],
             transformResponse: (response: any) => response.data,
         }),
-        broadcastCampaign: builder.mutation<{ status: string; message: string }, { audienceType: string; channels: string[]; payload: any }>({
+        sendTestCampaign: builder.mutation<
+            { status: string; message: string },
+            { testEmail?: string; testPhone?: string; channels: string[]; payload: any }
+        >({
             query: (args) => ({
-                url: `/campaigns/broadcast`,
+                url: `/campaigns/test-send`,
                 method: "POST",
-                body: args
+                body: args,
             }),
             transformResponse: (response: any) => ({
                 status: response.status,
-                message: response.message
+                message: response.message,
+            }),
+        }),
+        broadcastCampaign: builder.mutation<
+            { status: string; message: string; data?: any },
+            {
+                campaignId?: string;
+                topic?: string;
+                tone?: string;
+                audienceType: string;
+                channels: string[];
+                payload: any;
+                couponId?: string;
+                couponCode?: string;
+                productId?: string;
+                categoryId?: string;
+                ctaUrl?: string;
+                scheduleMode?: "now" | "schedule";
+                scheduledAt?: string;
+            }
+        >({
+            query: (args) => ({
+                url: `/campaigns/broadcast`,
+                method: "POST",
+                body: args,
+            }),
+            invalidatesTags: ["Admin"],
+            transformResponse: (response: any) => ({
+                status: response.status,
+                message: response.message,
+                data: response.data,
             }),
         }),
         getHomeSections: builder.query<{ id: string; type: string; heading: string; quadCards?: { index: number; title: string }[] }[], void>({
@@ -251,8 +353,44 @@ export const adminApi = apiSlice.injectEndpoints({
                 method: "POST",
                 body: data,
             }),
-            invalidatesTags: ["Admin"],
+            invalidatesTags: ["Admin", "Home"],
             transformResponse: (response: any) => ({ message: response.message }),
+        }),
+        bulkProductAction: builder.mutation<{ message: string; modifiedCount?: number }, { productIds: string[]; action: string; data?: any }>({
+            query: (body) => ({
+                url: "/products/bulk-action",
+                method: "POST",
+                body,
+            }),
+            invalidatesTags: ["Product", "Admin"],
+            transformResponse: (response: any) => response.data || { message: response.message },
+        }),
+        bulkImportProducts: builder.mutation<{ message: string; count: number }, { products: any[] }>({
+            query: (body) => ({
+                url: "/products/bulk-import",
+                method: "POST",
+                body,
+            }),
+            invalidatesTags: ["Product", "Admin"],
+            transformResponse: (response: any) => response.data || { message: response.message },
+        }),
+        bulkOrderAction: builder.mutation<{ message: string; modifiedCount?: number }, { orderIds: string[]; status?: string; action?: string }>({
+            query: (body) => ({
+                url: "/admin/orders/bulk-action",
+                method: "POST",
+                body,
+            }),
+            invalidatesTags: ["Order", "Admin"],
+            transformResponse: (response: any) => response.data || { message: response.message },
+        }),
+        bulkCustomerAction: builder.mutation<{ message: string; modifiedCount?: number }, { userIds: string[]; action: string; data?: any }>({
+            query: (body) => ({
+                url: "/admin/users/bulk-action",
+                method: "POST",
+                body,
+            }),
+            invalidatesTags: ["User", "Admin"],
+            transformResponse: (response: any) => response.data || { message: response.message },
         }),
     }),
 });
@@ -265,8 +403,14 @@ export const {
     useGetAdminProductsQuery,
     useUpdateProductMutation,
     useDeleteProductMutation,
+    useBulkProductActionMutation,
+    useBulkImportProductsMutation,
+    useBulkOrderActionMutation,
+    useBulkCustomerActionMutation,
     useGetAllUsersQuery,
+    useLazyGetAllUsersQuery,
     useGetAllOrdersQuery,
+    useLazyGetAllOrdersQuery,
     useUpdateUserRoleMutation,
     useDeleteUserMutation,
     useGetUserDetailsQuery,
@@ -288,7 +432,12 @@ export const {
     useAssignCouponMutation,
     useValidateCouponMutation,
     useGetRealtimeAnalyticsQuery,
+    useGetAnalyticsOverviewQuery,
+    useGetCampaignSegmentCountsQuery,
+    useGetCampaignHistoryQuery,
+    useDeleteCampaignMutation,
     useGenerateCampaignDataMutation,
+    useSendTestCampaignMutation,
     useBroadcastCampaignMutation,
     useGetHomeSectionsQuery,
     useAddProductToHomeSectionMutation,
